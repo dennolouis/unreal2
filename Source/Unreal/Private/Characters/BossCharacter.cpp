@@ -226,16 +226,17 @@ void ABossCharacter::PlayParticleGatherFX()
 {
 	if (!GatherEffect || !GatherEffectSpawnPoint) return;
 
-	GatherEffectComponent = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
-		GetWorld(),
-		GatherEffect,
-		GatherEffectSpawnPoint->GetComponentLocation(),
-		GatherEffectSpawnPoint->GetComponentRotation(),
-		FVector(1.f), // scale
-		false, // auto destroy
-		true, // auto activate
-		ENCPoolMethod::None,
-		true  // preCullCheck
+	GatherEffectComponent = UNiagaraFunctionLibrary::SpawnSystemAttached(
+		GatherEffect,                                 // Niagara System
+		GatherEffectSpawnPoint,                       // Attach to this component
+		NAME_None,                                    // Attach point name (socket/bone)
+		FVector::ZeroVector,                          // Location offset
+		FRotator::ZeroRotator,                        // Rotation offset
+		EAttachLocation::KeepRelativeOffset,          // Maintain relative location
+		true,                                         // Auto activate
+		true,                                         // Auto destroy
+		ENCPoolMethod::None,                          // Pooling method
+		true                                          // PreCull check
 	);
 }
 

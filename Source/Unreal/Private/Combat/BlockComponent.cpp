@@ -37,25 +37,32 @@ void UBlockComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 bool UBlockComponent::Check(AActor* Opponent)
 {
 	ACharacter* CharacterRef{ GetOwner<ACharacter>() };
-
-	if (!CharacterRef->Implements<UMainplayer>()){ return true; }
+	if (!CharacterRef->Implements<UMainplayer>()) { return true; }
 
 	IMainplayer* PlayerRef{ Cast<IMainplayer>(CharacterRef) };
+	if (!PlayerRef) { return true; }
 
-	FVector OpponentForward{ Opponent->GetActorForwardVector() };
-	FVector PlayerForward{ CharacterRef->GetActorForwardVector() };
+	// Default result: blocking fails
+	if (!Opponent) { return true; }
 
-	double Result{ FVector::DotProduct(OpponentForward, PlayerForward) };
+	// Safely get forward vectors
+	FVector OpponentForward = Opponent->GetActorForwardVector();
+	FVector PlayerForward = CharacterRef->GetActorForwardVector();
 
-	if (Result > 0 || !PlayerRef->HasEnoughStamina(StaminaCost)) 
-	{ 
-		return true; 
+	// Make sure opponent has a valid forward vector (non-zero)
+	if (OpponentForward.IsNearlyZero()) { return true; }
+
+	double Result = FVector::DotProduct(OpponentForward, PlayerForward);
+
+	// Not blocking if result is facing same direction or stamina is low
+	if (Result > 0 || !PlayerRef->HasEnoughStamina(StaminaCost))
+	{
+		return true;
 	}
 
 	CharacterRef->PlayAnimMontage(BlockAnimMontage);
-
 	OnBlockDelegate.Broadcast(StaminaCost);
 
-	return false; 
+	return false;
 }
 
