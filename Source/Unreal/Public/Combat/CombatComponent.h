@@ -36,7 +36,10 @@ class UNREAL_API UCombatComponent : public UActorComponent
 	int HeavyComboCounter{ 0 };
 
 	UPROPERTY(VisibleAnywhere)
-	bool bCanAttack{ true };
+	bool bCanQueueNextAttack{ true };
+
+	UPROPERTY(VisibleAnywhere)
+	bool bAttackInputBuffered{ false };
 
 	UPROPERTY(VisibleAnywhere)
 	bool bIsMoving{ false };
@@ -68,6 +71,11 @@ public:
 	void ComboAttack();
 
 	UFUNCTION(BlueprintCallable)
+	void TryComboAttack();
+
+	bool IsAttackingInProgress();
+
+	UFUNCTION(BlueprintCallable)
 	void HeavyAttack();
 
 	UFUNCTION(BlueprintCallable)
@@ -88,5 +96,5 @@ public:
 	void SetIsMoving(bool value) { bIsMoving = value; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
-	bool CanInterruptAnimation() const { return bCanAttack; }
+	bool CanInterruptAnimation() const { return bCanQueueNextAttack && !bAttackInputBuffered; }
 };

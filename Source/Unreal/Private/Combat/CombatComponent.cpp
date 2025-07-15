@@ -48,7 +48,7 @@ void UCombatComponent::ComboAttack()
 		}
 	}
 
-	if (!bCanAttack) { return; }
+	if (!bCanQueueNextAttack) { return; }
 
 	ULockOnComponent* LockOnComp = CharacterRef->FindComponentByClass<ULockOnComponent>();
 	if (LockOnComp && LockOnComp->GetCurrentTargetActor())
@@ -56,7 +56,8 @@ void UCombatComponent::ComboAttack()
 		LockOnComp->FaceCurrentTargetForOneFrame();
 	}
 
-	bCanAttack = false;
+	bCanQueueNextAttack = false;
+	bAttackInputBuffered = false;
 
 	float AttackAnimDuration = CharacterRef->PlayAnimMontage(AttackAnimations[ComboCounter]);
 
@@ -73,6 +74,18 @@ void UCombatComponent::ComboAttack()
 	OnAttackPerformedDelegate.Broadcast(StaminaCost);
 }
 
+void UCombatComponent::TryComboAttack()
+{
+	if (bCanQueueNextAttack)
+	{
+		ComboAttack();
+	}
+	else 
+	{
+		bAttackInputBuffered = true;
+	}
+}
+
 void UCombatComponent::HeavyAttack()
 {
 	if (CharacterRef->Implements<UMainplayer>())
@@ -86,9 +99,9 @@ void UCombatComponent::HeavyAttack()
 		}
 	}
 
-	if (!bCanAttack) { return; }
+	if (!bCanQueueNextAttack) { return; }
 
-	bCanAttack = false;
+	bCanQueueNextAttack = false;
 
 	ULockOnComponent* LockOnComp = CharacterRef->FindComponentByClass<ULockOnComponent>();
 	if (LockOnComp && LockOnComp->GetCurrentTargetActor())
@@ -107,7 +120,13 @@ void UCombatComponent::HeavyAttack()
 
 void UCombatComponent::HandleResetAttack()
 {
-	bCanAttack = true;
+	bCanQueueNextAttack = true;
+
+	if (bAttackInputBuffered) 
+	{
+		bAttackInputBuffered = false;
+		ComboAttack();
+	}
 }
 
 void UCombatComponent::RandomAttack()
@@ -127,7 +146,7 @@ void UCombatComponent::ResetComboCounter()
 
 bool UCombatComponent::IsAttacking() const
 {
-	return !bCanAttack;
+	return !bCanQueueNextAttack;
 }
 
 void UCombatComponent::StopAttackAnimation()
@@ -135,7 +154,7 @@ void UCombatComponent::StopAttackAnimation()
 	if (CharacterRef) 
 	{ 
 		CharacterRef->StopAnimMontage(); 
-		bCanAttack = true; 
+		bCanQueueNextAttack = true; 
 	}
 }
 
