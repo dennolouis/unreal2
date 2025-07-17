@@ -24,6 +24,9 @@ class UNREAL_API ABossCharacter : public ACharacter, public IEnemy, public IFigh
 
 	class AAIController* ControllerRef;
 
+	UPROPERTY(EditAnywhere)
+	TArray<UAnimMontage*> HurtAnimMontages;
+
 public:
 	// Sets default values for this character's properties
 	ABossCharacter();
@@ -110,6 +113,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void StopParticleGatherFX();
+
+	UFUNCTION(BlueprintCallable)
+	void PlayHurtAnim();
 };
 
 

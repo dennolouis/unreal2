@@ -59,6 +59,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
 	FName SecondaryWeaponSocket;
 
+	UPROPERTY(EditAnywhere)
+	double AnimCancelStaminaCost{ 30.0 };
+
 
 protected:
 	// Called when the game starts or when spawned

@@ -144,6 +144,11 @@ void AMainCharacter::PlayHurtAnim(AActor* Attacker, TSubclassOf<class UCameraSha
 		FMath::RandRange(0, HurtAnimMontages.Num() - 1)
 	};
 
+	if (CombatComp)
+	{
+		CombatComp->ClearBufferedInput();
+	}
+
 	PlayAnimMontage(HurtAnimMontages[RandomIndex]);
 
 	if (CameraShakeTemplate)
@@ -155,11 +160,24 @@ void AMainCharacter::PlayHurtAnim(AActor* Attacker, TSubclassOf<class UCameraSha
 
 void AMainCharacter::CustomJump()
 {
-	if (CombatComp && CombatComp->IsAttacking())
+	if (CombatComp && !CombatComp->CanInterruptAnimation() || IsPlayingHurtAnimation())
 	{
-		CombatComp->StopAttackAnimation();
+		CombatComp->ClearBufferedInput();
+
+		IMainplayer* IPlayerRef{ Cast<IMainplayer>(this) };
+
+		if (IPlayerRef && !IPlayerRef->HasEnoughStamina(AnimCancelStaminaCost))
+		{
+			return;
+		}
+
+		if (StatsComp)
+		{
+			StatsComp->ReduceStamina(AnimCancelStaminaCost);
+		}
 	}
 
+	StopAnimMontage();
 	Super::Jump();
 }
 

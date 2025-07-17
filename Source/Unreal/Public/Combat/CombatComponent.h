@@ -97,4 +97,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	bool CanInterruptAnimation() const { return bCanQueueNextAttack && !bAttackInputBuffered; }
+
+	UFUNCTION(BlueprintCallable)
+	void ClearBufferedInput() { bCanQueueNextAttack = true; bAttackInputBuffered = false; }
 };

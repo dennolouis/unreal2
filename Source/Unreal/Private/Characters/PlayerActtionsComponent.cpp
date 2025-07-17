@@ -6,6 +6,8 @@
 #include "Interfaces/Mainplayer.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Characters/MainCharacter.h"
+#include "Combat/CombatComponent.h"
 
 // Sets default values for this component's properties
 UPlayerActtionsComponent::UPlayerActtionsComponent()
@@ -62,16 +64,28 @@ void UPlayerActtionsComponent::Walk()
 
 void UPlayerActtionsComponent::Roll()
 {
-	UE_LOG(LogTemp, Warning, TEXT("Rolling"));
-
 	if (bIsRollActive || !IPlayerRef->HasEnoughStamina(RollCost))
 	{
 		return;
 	}
 
+	bool bCanclledAttack{ false };
+
+	AMainCharacter* MainCharacterRef{ Cast<AMainCharacter>(CharacterRef) };
+
+	// Dash canel takes up more stamina
+	if (MainCharacterRef && MainCharacterRef->CombatComp && !MainCharacterRef->CombatComp->CanInterruptAnimation()) 
+	{
+		if (!IPlayerRef->HasEnoughStamina(MainCharacterRef->AnimCancelStaminaCost))
+		{
+			return;
+		}
+		bCanclledAttack = true;
+	}
+
 	bIsRollActive = true;
 
-	OnRollDelegate.Broadcast(RollCost);
+	OnRollDelegate.Broadcast(bCanclledAttack ? MainCharacterRef->AnimCancelStaminaCost : RollCost);
 
 	FVector Direction{
 		CharacterRef->GetCharacterMovement()->Velocity.Length() < 1 ?

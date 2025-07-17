@@ -248,3 +248,17 @@ void ABossCharacter::StopParticleGatherFX()
 	}
 }
 
+void ABossCharacter::PlayHurtAnim()
+{
+	if (StatsComp && StatsComp->Stats[EStat::Health] <= 0)
+	{
+		return;
+	}
+
+	int RandomIndex{
+		FMath::RandRange(0, HurtAnimMontages.Num() - 1)
+	};
+
+	PlayAnimMontage(HurtAnimMontages[RandomIndex]);
+}
+
