@@ -67,6 +67,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effects")
 	class UNiagaraSystem* GatherEffect;
 
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	class UHealthDropComponent* HealthDropComp;
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;

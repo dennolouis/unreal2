@@ -10,6 +10,7 @@
 #include "Combat/TraceComponent.h"
 #include "Combat/WeaponTraceComponent.h"
 #include "Characters/MainCharacter.h"
+#include "Characters/HealthDropComponent.h"
 #include "BrainComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Interfaces/Mainplayer.h"
@@ -27,6 +28,7 @@ ABossCharacter::ABossCharacter()
 	StatsComp = CreateDefaultSubobject<UStatsComponent>(TEXT("Stats Componet"));
 	CombatComp = CreateDefaultSubobject<UCombatComponent>(TEXT("Combat Componet"));
 	TraceComp = CreateDefaultSubobject<UTraceComponent>(TEXT("Trace Component"));
+	HealthDropComp = CreateDefaultSubobject<UHealthDropComponent>(TEXT("Health Drop Component"));
 
 	GatherEffectSpawnPoint = CreateDefaultSubobject<USceneComponent>(TEXT("Gather Effect Spawn Point"));
 	GatherEffectSpawnPoint->SetupAttachment(RootComponent);
