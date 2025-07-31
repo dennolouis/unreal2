@@ -35,46 +35,15 @@ void UHealthDropComponent::TickComponent(float DeltaTime, ELevelTick TickType, F
 void UHealthDropComponent::TrySpawnHealthPickup()
 {
 	if (!HealthPickupClass) return;
-	if (!GetOwner()) return;
 
-	// Check drop chance
-	if (FMath::FRand() > DropChance)
+	if (FMath::FRand() <= DropChance)
 	{
-		return;
+		FVector SpawnLocation = GetOwner()->GetActorLocation() + FVector(0, 0, 50);
+		FRotator SpawnRotation = FRotator::ZeroRotator;
+
+		GetWorld()->SpawnActor<AActor>(HealthPickupClass, SpawnLocation, SpawnRotation);
 	}
-
-	UWorld* World = GetWorld();
-	if (!World) return;
-
-	FVector StartLocation = GetOwner()->GetActorLocation();
-	FVector EndLocation = StartLocation - FVector(0, 0, 1000); // Trace down
-
-	FHitResult HitResult;
-	FCollisionQueryParams TraceParams;
-	TraceParams.AddIgnoredActor(GetOwner());
-
-	bool bHit = World->LineTraceSingleByChannel(
-		HitResult,
-		StartLocation,
-		EndLocation,
-		ECC_Visibility,
-		TraceParams
-	);
-
-	FVector SpawnLocation;
-	if (bHit)
-	{
-		SpawnLocation = HitResult.ImpactPoint + FVector(0, 0, 10); // Lift it slightly off the ground
-	}
-	else
-	{
-		// Fallback to current location with slight offset
-		SpawnLocation = StartLocation + FVector(0, 0, 10);
-	}
-
-	FRotator SpawnRotation = FRotator::ZeroRotator;
-
-	World->SpawnActor<AActor>(HealthPickupClass, SpawnLocation, SpawnRotation);
 }
+
 
 
