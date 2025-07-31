@@ -68,6 +68,9 @@ public:
 	void ReduceHealth(float Amount, AActor* Opponent);
 
 	UFUNCTION(BlueprintCallable)
+	void IncreaseHealth(float Amount);
+
+	UFUNCTION(BlueprintCallable)
 	void ReduceStamina(float Amount);
 
 	UFUNCTION(BlueprintCallable)

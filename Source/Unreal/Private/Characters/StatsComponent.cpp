@@ -60,6 +60,22 @@ void UStatsComponent::ReduceHealth(float Amount, AActor* Opponent)
 	}
 }
 
+void UStatsComponent::IncreaseHealth(float Amount)
+{
+	Stats[EStat::Health] += Amount;
+
+	Stats[EStat::Health] = UKismetMathLibrary::FClamp(
+		Stats[EStat::Health],
+		0,
+		Stats[EStat::MaxHealth]
+	);
+
+	OnHealthPercentUpdateDelegate.Broadcast(
+		GetStatPercentage(EStat::Health, EStat::MaxHealth),
+		GetOwner()
+	);
+}
+
 void UStatsComponent::ReduceStamina(float Amount)
 {
 	Stats[EStat::Stamina] -= Amount;
