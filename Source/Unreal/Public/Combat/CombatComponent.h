@@ -22,6 +22,9 @@ class UNREAL_API UCombatComponent : public UActorComponent
 	TArray<UAnimMontage*> AttackAnimations;
 
 	UPROPERTY(EditAnywhere)
+	UAnimMontage* SpecialAttack;
+
+	UPROPERTY(EditAnywhere)
 	UAnimMontage* StandingHeavyAttackAnimation;
 
 	UPROPERTY(EditAnywhere)
@@ -50,6 +53,9 @@ class UNREAL_API UCombatComponent : public UActorComponent
 	UPROPERTY(EditAnywhere)
 	float HeavyStaminaCost{ 5.0f };
 
+	UPROPERTY(EditAnywhere)
+	float SpecialAttackStaminaCost{ 50.0f };
+
 public:	
 	// Sets default values for this component's properties
 	UCombatComponent();
@@ -58,6 +64,9 @@ public:
 	FOnAttackPerformedSignature OnAttackPerformedDelegate;
 
 	float AnimDuration;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	bool bIsModifierDown{ false };
 
 protected:
 	// Called when the game starts
@@ -91,6 +100,12 @@ public:
 
 	UFUNCTION()
 	void RandomAttack();
+
+	UFUNCTION(BlueprintCallable)
+	void TryPlaySpecialAttack();
+
+	UFUNCTION(BlueprintCallable)
+	void PlaySpecialAttack();
 
 	UFUNCTION(BlueprintCallable)
 	void SetIsMoving(bool value) { bIsMoving = value; }

@@ -138,6 +138,43 @@ void UCombatComponent::RandomAttack()
 	AnimDuration = CharacterRef->PlayAnimMontage(AttackAnimations[RandomIndex]);
 }
 
+void UCombatComponent::TryPlaySpecialAttack()
+{
+	if (bCanQueueNextAttack)
+	{
+		PlaySpecialAttack();
+	}
+}
+
+void UCombatComponent::PlaySpecialAttack()
+{
+	if (CharacterRef->Implements<UMainplayer>())
+	{
+		IMainplayer* IPlayerRef{ Cast<IMainplayer>(CharacterRef) };
+
+		// Check if the player has enough stamina for a heavy attack
+		if (IPlayerRef && !IPlayerRef->HasEnoughStamina(SpecialAttackStaminaCost))
+		{
+			return;
+		}
+	}
+
+	if (!bCanQueueNextAttack) { return; }
+
+	bCanQueueNextAttack = false;
+
+	ULockOnComponent* LockOnComp = CharacterRef->FindComponentByClass<ULockOnComponent>();
+	if (LockOnComp && LockOnComp->GetCurrentTargetActor())
+	{
+		LockOnComp->FaceCurrentTargetForOneFrame();
+	}
+
+	float AttackAnimDuration = CharacterRef->PlayAnimMontage(SpecialAttack);
+
+	// Broadcast the attack event and deduct stamina
+	OnAttackPerformedDelegate.Broadcast(SpecialAttackStaminaCost);
+}
+
 void UCombatComponent::ResetComboCounter()
 {
 	ComboCounter = 0;
