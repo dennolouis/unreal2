@@ -65,11 +65,13 @@ void UCombatComponent::ComboAttack()
 
 	int MaxCombo{ AttackAnimations.Num() };
 
-	ComboCounter = UKismetMathLibrary::Wrap(
-		ComboCounter,
-		-1,
-		(MaxCombo - 1)
-	); //can just use mod (%) instead
+	if (ComboCounter >= MaxCombo)
+	{
+		// End of combo, wait until reset notify or timer
+		ComboCounter = 0;
+		bCanQueueNextAttack = false;
+		bAttackInputBuffered = false;
+	}
 
 	OnAttackPerformedDelegate.Broadcast(StaminaCost);
 }
