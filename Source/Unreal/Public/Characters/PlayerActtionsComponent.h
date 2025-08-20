@@ -56,6 +56,20 @@ public:
 
 	bool bIsRollActive{ false };
 
+	UPROPERTY(EditAnywhere, Category = "Camera")
+	float WalkFOV = 90.f;
+
+	UPROPERTY(EditAnywhere, Category = "Camera")
+	float SprintFOV = 120.f;
+
+	UPROPERTY(EditAnywhere, Category = "Camera")
+	float FOVTransitionTime = 0.5f; // seconds
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
+	class UCameraComponent* FollowCamera;
+
+	FTimerHandle FOVHandle;
+
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
@@ -75,4 +89,9 @@ public:
 
 	UFUNCTION()
 	void FinishRollAnim();
+	
+	void SetCameraFOV(float TargetFOV, float Duration);
+
+private:
+	bool bIsSprinting{ false };
 };

@@ -8,6 +8,8 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Characters/MainCharacter.h"
 #include "Combat/CombatComponent.h"
+#include "Camera/CameraComponent.h"
+
 
 // Sets default values for this component's properties
 UPlayerActtionsComponent::UPlayerActtionsComponent()
@@ -27,6 +29,7 @@ void UPlayerActtionsComponent::BeginPlay()
 
 	CharacterRef = GetOwner<ACharacter>();
 	MovementComp = CharacterRef->GetCharacterMovement();
+	FollowCamera = CharacterRef->FindComponentByClass<UCameraComponent>();
 
 	if (!CharacterRef->Implements<UMainplayer>()) { return; }
 
@@ -54,13 +57,25 @@ void UPlayerActtionsComponent::Sprint()
 
 	MovementComp->MaxWalkSpeed = SprintSpeed;
 
+
 	OnSprintDelegate.Broadcast(SprintCost);
+
+	if (!bIsSprinting)
+	{
+		SetCameraFOV(SprintFOV, FOVTransitionTime);
+		bIsSprinting = true;
+	}
 }
 
 void UPlayerActtionsComponent::Walk()
 {
 	MovementComp->MaxWalkSpeed = WalkSpeed;
+
+	SetCameraFOV(WalkFOV, FOVTransitionTime);
+	
+	bIsSprinting = false;
 }
+
 
 void UPlayerActtionsComponent::Roll()
 {
@@ -113,4 +128,40 @@ void UPlayerActtionsComponent::FinishRollAnim()
 {
 	bIsRollActive = false;
 }
+
+void UPlayerActtionsComponent::SetCameraFOV(float TargetFOV, float Duration)
+{
+	if (!FollowCamera || !CharacterRef) { return; }
+
+	// clear any previous lerp
+	CharacterRef->GetWorldTimerManager().ClearTimer(FOVHandle);
+
+	float StartFOV = FollowCamera->FieldOfView;
+	float TimeStep = 0.02f;
+	int32 TotalSteps = FMath::Max(1, FMath::RoundToInt(Duration / TimeStep));
+	int32 Step = 0;
+
+	CharacterRef->GetWorldTimerManager().SetTimer(
+		FOVHandle,
+		[this, StartFOV, TargetFOV, TotalSteps, Step]() mutable
+		{
+			Step++;
+			float Alpha = static_cast<float>(Step) / TotalSteps;
+			float NewFOV = FMath::Lerp(StartFOV, TargetFOV, Alpha);
+
+			FollowCamera->SetFieldOfView(NewFOV);
+
+			if (Alpha >= 1.f)
+			{
+				CharacterRef->GetWorldTimerManager().ClearTimer(FOVHandle);
+			}
+		},
+		TimeStep,
+		true
+	);
+}
+
+
+
+
 
