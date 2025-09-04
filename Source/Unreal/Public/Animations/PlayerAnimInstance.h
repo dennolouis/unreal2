@@ -31,6 +31,9 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	bool bIsBlocking{ false };
 
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	bool bIsInSpecialAttackStance{ false };
+
 	UFUNCTION(BlueprintCallable)
 	void HandleUpdatedTarget(AActor* NewTargetActorRef);
 
