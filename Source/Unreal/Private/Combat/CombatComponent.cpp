@@ -82,7 +82,7 @@ void UCombatComponent::TryComboAttack()
 	{
 		ComboAttack();
 	}
-	else 
+	else if (ComboCounter != 0)
 	{
 		bAttackInputBuffered = true;
 	}
