@@ -26,6 +26,12 @@ DECLARE_DYNAMIC_MULTICAST_SPARSE_DELEGATE(
 	UStatsComponent, OnZeroHealthDelegate
 );
 
+DECLARE_DYNAMIC_MULTICAST_SPARSE_DELEGATE_OneParam(
+	FOnSpecialGagePercentUpdateSignature,
+	UStatsComponent, OnSpecialGagePercentUpdateDelegate,
+	float, Percentage
+);
+
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class UNREAL_API UStatsComponent : public UActorComponent
 {
@@ -54,6 +60,9 @@ public:
 	FOnStaminaPercentUpdateSignature OnStaminaPercentUpdateDelegate;
 
 	UPROPERTY(BlueprintAssignable)
+	FOnSpecialGagePercentUpdateSignature OnSpecialGagePercentUpdateDelegate;
+
+	UPROPERTY(BlueprintAssignable)
 	FOnZeroHealthSignature OnZeroHealthDelegate;
 
 protected:
@@ -69,6 +78,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void IncreaseHealth(float Amount);
+
+	UFUNCTION(BlueprintCallable)
+	void IncreaseSpecialGage(float Amount);
 
 	UFUNCTION(BlueprintCallable)
 	void ReduceStamina(float Amount);

@@ -13,5 +13,7 @@ enum EStat
 	Strength UMETA(DisplayName = "Strength"),
 	Stamina UMETA(DisplayName = "Stamina"),
 	MaxStamina UMETA(DisplayName = "Max Stamina"),
-	MeleeRange UMETA(DisplayName = "Melee Range")
+	MeleeRange UMETA(DisplayName = "Melee Range"),
+	SpecialGage UMETA(DisplayName = "Special Gage"),
+	MaxSpecialGage UMETA(DisplayName = "Max Special Gage")
 };

@@ -76,6 +76,21 @@ void UStatsComponent::IncreaseHealth(float Amount)
 	);
 }
 
+void UStatsComponent::IncreaseSpecialGage(float Amount)
+{
+	Stats[EStat::SpecialGage] += Amount;
+
+	Stats[EStat::SpecialGage] = UKismetMathLibrary::FClamp(
+		Stats[EStat::SpecialGage],
+		0,
+		Stats[EStat::MaxSpecialGage]
+	);
+
+	OnSpecialGagePercentUpdateDelegate.Broadcast(
+		GetStatPercentage(EStat::SpecialGage, EStat::MaxSpecialGage)
+	);
+}
+
 void UStatsComponent::ReduceStamina(float Amount)
 {
 	Stats[EStat::Stamina] -= Amount;
