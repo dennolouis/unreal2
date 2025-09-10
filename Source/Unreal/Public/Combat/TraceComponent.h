@@ -8,6 +8,11 @@
 #include "Combat/EAttackType.h"
 #include "TraceComponent.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_SPARSE_DELEGATE(
+	FOnSuccessfulTraceHitSignature,
+	UTraceComponent, OnSuccessfulTraceHitDelegate
+);
+
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class UNREAL_API UTraceComponent : public UActorComponent
@@ -36,6 +41,9 @@ class UNREAL_API UTraceComponent : public UActorComponent
 public:	
 	// Sets default values for this component's properties
 	UTraceComponent();
+
+	UPROPERTY(BlueprintAssignable)
+	FOnSuccessfulTraceHitSignature OnSuccessfulTraceHitDelegate;
 
 protected:
 	// Called when the game starts

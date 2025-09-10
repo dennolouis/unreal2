@@ -12,6 +12,11 @@ DECLARE_DYNAMIC_MULTICAST_SPARSE_DELEGATE_OneParam(
 	float, Amount
 );
 
+DECLARE_DYNAMIC_MULTICAST_SPARSE_DELEGATE(
+	FOnSpecialAttackSignature,
+	UCombatComponent, OnSpecialAttackDelegate
+);
+
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class UNREAL_API UCombatComponent : public UActorComponent
@@ -62,6 +67,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FOnAttackPerformedSignature OnAttackPerformedDelegate;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnSpecialAttackSignature OnSpecialAttackDelegate;
 
 	float AnimDuration;
 

@@ -80,6 +80,7 @@ public:
 	virtual float GetDamage() override;
 
 	virtual bool HasEnoughStamina(float Cost) override;
+	virtual bool SpecialGageFull() override;
 
 	UFUNCTION(BlueprintCallable)
 	void HandleDeath();

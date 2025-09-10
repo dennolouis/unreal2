@@ -91,6 +91,15 @@ void UStatsComponent::IncreaseSpecialGage(float Amount)
 	);
 }
 
+void UStatsComponent::DepleteSpecialGage()
+{
+	Stats[EStat::SpecialGage] = 0;
+
+	OnSpecialGagePercentUpdateDelegate.Broadcast(
+		0
+	);
+}
+
 void UStatsComponent::ReduceStamina(float Amount)
 {
 	Stats[EStat::Stamina] -= Amount;

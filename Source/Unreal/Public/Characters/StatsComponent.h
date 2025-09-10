@@ -83,6 +83,9 @@ public:
 	void IncreaseSpecialGage(float Amount);
 
 	UFUNCTION(BlueprintCallable)
+	void DepleteSpecialGage();
+
+	UFUNCTION(BlueprintCallable)
 	void ReduceStamina(float Amount);
 
 	UFUNCTION(BlueprintCallable)

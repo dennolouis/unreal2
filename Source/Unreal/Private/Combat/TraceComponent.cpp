@@ -136,6 +136,8 @@ void UTraceComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 			HitParticleTemplate,
 			Hit.ImpactPoint
 		);
+
+		OnSuccessfulTraceHitDelegate.Broadcast();
 	}
 
 }

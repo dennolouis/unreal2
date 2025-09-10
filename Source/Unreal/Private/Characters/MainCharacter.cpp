@@ -100,6 +100,11 @@ bool AMainCharacter::HasEnoughStamina(float Cost)
 	return StatsComp->Stats[EStat::Stamina] >= Cost;
 }
 
+bool AMainCharacter::SpecialGageFull()
+{
+	return StatsComp->Stats[EStat::SpecialGage] >= StatsComp->Stats[EStat::MaxSpecialGage];
+}
+
 void AMainCharacter::HandleDeath()
 {
 	PlayAnimMontage(DeathAnimMontage);

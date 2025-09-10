@@ -25,5 +25,7 @@ public:
 
 	virtual bool HasEnoughStamina(float Cost) { return true; }
 
+	virtual bool SpecialGageFull() { return true; }
+
 	virtual void EndLockOnWithActor(AActor* ActorRef) {};
 };

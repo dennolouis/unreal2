@@ -83,5 +83,7 @@ void UWeaponTraceComponent::HandleTrace()
         {
             UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), HitParticleTemplate, Hit.ImpactPoint);
         }
+
+        OnSuccessfulHitDelegate.Broadcast();
     }
 }

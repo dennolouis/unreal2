@@ -155,7 +155,7 @@ void UCombatComponent::PlaySpecialAttack()
 		IMainplayer* IPlayerRef{ Cast<IMainplayer>(CharacterRef) };
 
 		// Check if the player has enough stamina for a heavy attack
-		if (IPlayerRef && !IPlayerRef->HasEnoughStamina(SpecialAttackStaminaCost))
+		if (IPlayerRef && !IPlayerRef->SpecialGageFull())
 		{
 			return;
 		}
@@ -173,8 +173,9 @@ void UCombatComponent::PlaySpecialAttack()
 
 	float AttackAnimDuration = CharacterRef->PlayAnimMontage(SpecialAttack);
 
-	// Broadcast the attack event and deduct stamina
-	OnAttackPerformedDelegate.Broadcast(SpecialAttackStaminaCost);
+	// Broadcast the attack event and deduct special gage
+	OnSpecialAttackDelegate.Broadcast();
+	
 }
 
 void UCombatComponent::ResetComboCounter()

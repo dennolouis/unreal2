@@ -4,6 +4,11 @@
 #include "Components/ActorComponent.h"
 #include "WeaponTraceComponent.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_SPARSE_DELEGATE(
+    FOnSuccessfulHitSignature,
+    UWeaponTraceComponent, OnSuccessfulHitDelegate
+);
+
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class UNREAL_API UWeaponTraceComponent : public UActorComponent
 {
@@ -32,6 +37,9 @@ private:
 
 public:
     UWeaponTraceComponent();
+
+    UPROPERTY(BlueprintAssignable)
+    FOnSuccessfulHitSignature OnSuccessfulHitDelegate;
 
 protected:
     virtual void BeginPlay() override;
