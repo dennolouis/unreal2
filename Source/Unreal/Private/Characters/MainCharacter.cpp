@@ -165,7 +165,7 @@ void AMainCharacter::PlayHurtAnim(AActor* Attacker, TSubclassOf<class UCameraSha
 
 void AMainCharacter::CustomJump()
 {
-	if (CombatComp && !CombatComp->CanInterruptAnimation() || IsPlayingHurtAnimation())
+	if ((CombatComp && !CombatComp->CanInterruptAnimation()) || IsPlayingHurtAnimation())
 	{
 		CombatComp->ClearBufferedInput();
 

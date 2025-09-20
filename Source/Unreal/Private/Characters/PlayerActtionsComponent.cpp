@@ -112,7 +112,11 @@ void UPlayerActtionsComponent::Roll()
 
 	CharacterRef->SetActorRotation(NewRot);
 
-	float Duration{ CharacterRef->PlayAnimMontage(RollAnimMontage) };
+	int RandomIndex{
+		FMath::RandRange(0, RollAnimMontages.Num() - 1)
+	};
+
+	float Duration{ CharacterRef->PlayAnimMontage(RollAnimMontages[RandomIndex])};
 	FTimerHandle RollTimerHandle;
 
 	CharacterRef->GetWorldTimerManager().SetTimer(

@@ -39,7 +39,7 @@ class UNREAL_API UPlayerActtionsComponent : public UActorComponent
 	float WalkSpeed{ 500.0f };
 
 	UPROPERTY(EditAnywhere)
-	UAnimMontage* RollAnimMontage;
+	TArray<UAnimMontage*> RollAnimMontages;
 
 	UPROPERTY(EditAnywhere)
 	float RollCost{ 5.0f };
