@@ -13,6 +13,9 @@
 #include "Combat/WeaponTraceComponent.h"
 #include "Characters/PlayerActtionsComponent.h"
 #include <Kismet/KismetMathLibrary.h>
+#include "NiagaraComponent.h"
+#include "NiagaraSystem.h"
+#include "NiagaraFunctionLibrary.h"
 
 
 // Sets default values
@@ -27,6 +30,9 @@ AMainCharacter::AMainCharacter()
 	TraceComp = CreateDefaultSubobject<UTraceComponent>(TEXT("Trace Component"));
 	BlockComp = CreateDefaultSubobject<UBlockComponent>(TEXT("Block Component"));
 	PlayerActionsComp = CreateDefaultSubobject<UPlayerActtionsComponent>(TEXT("Player Actions Component"));
+
+	AuraEffectSpawnPoint = CreateDefaultSubobject<USceneComponent>(TEXT("Gather Effect Spawn Point"));
+	AuraEffectSpawnPoint->SetupAttachment(RootComponent);
 }
 
 // Called when the game starts or when spawned
@@ -234,5 +240,59 @@ bool AMainCharacter::IsPlayingHurtAnimation() const
 
 	// Check if the current montage is in the HurtAnimMontages array
 	return HurtAnimMontages.Contains(CurrentMontage);
+}
+
+void AMainCharacter::PlayAuraFX()
+{
+	if (!AuraEffect || !AuraEffectSpawnPoint) return;
+
+	NiagaraEffectComponent = UNiagaraFunctionLibrary::SpawnSystemAttached(
+		AuraEffect,                                 // Niagara System
+		AuraEffectSpawnPoint,                       // Attach to this component
+		NAME_None,                                    // Attach point name (socket/bone)
+		FVector::ZeroVector,                          // Location offset
+		FRotator::ZeroRotator,                        // Rotation offset
+		EAttachLocation::KeepRelativeOffset,          // Maintain relative location
+		true,                                         // Auto activate
+		true,                                         // Auto destroy
+		ENCPoolMethod::None,                          // Pooling method
+		true                                          // PreCull check
+	);
+}
+
+void AMainCharacter::StopAuraFX()
+{
+	if (NiagaraEffectComponent && NiagaraEffectComponent->IsActive())
+	{
+		NiagaraEffectComponent->Deactivate();
+	}
+}
+
+void AMainCharacter::PlaySpecialAuraFX()
+{
+	if (StatsComp->GetStatPercentage(EStat::SpecialGage, EStat::MaxSpecialGage) < 1) return;
+
+	if (!SpecialAuraEffect || !AuraEffectSpawnPoint) return;
+
+	NiagaraSpecialEffectComponent = UNiagaraFunctionLibrary::SpawnSystemAttached(
+		SpecialAuraEffect,                                 // Niagara System
+		AuraEffectSpawnPoint,                       // Attach to this component
+		NAME_None,                                    // Attach point name (socket/bone)
+		FVector::ZeroVector,                          // Location offset
+		FRotator::ZeroRotator,                        // Rotation offset
+		EAttachLocation::KeepRelativeOffset,          // Maintain relative location
+		true,                                         // Auto activate
+		true,                                         // Auto destroy
+		ENCPoolMethod::None,                          // Pooling method
+		true                                          // PreCull check
+	);
+}
+
+void AMainCharacter::StopSpecialAuraFX()
+{
+	if (NiagaraSpecialEffectComponent && NiagaraSpecialEffectComponent->IsActive())
+	{
+		NiagaraSpecialEffectComponent->Deactivate();
+	}
 }
 

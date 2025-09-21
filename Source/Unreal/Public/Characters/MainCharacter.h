@@ -62,6 +62,21 @@ public:
 	UPROPERTY(EditAnywhere)
 	double AnimCancelStaminaCost{ 30.0 };
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effects")
+	USceneComponent* AuraEffectSpawnPoint;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effects")
+	class UNiagaraComponent* NiagaraEffectComponent;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effects")
+	class UNiagaraSystem* AuraEffect;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effects")
+	class UNiagaraComponent* NiagaraSpecialEffectComponent;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effects")
+	class UNiagaraSystem* SpecialAuraEffect;
+
 
 protected:
 	// Called when the game starts or when spawned
@@ -106,4 +121,16 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	bool IsPlayingHurtAnimation() const;
+
+	UFUNCTION(BlueprintCallable)
+	void PlayAuraFX();
+
+	UFUNCTION(BlueprintCallable)
+	void StopAuraFX();
+
+	UFUNCTION(BlueprintCallable)
+	void PlaySpecialAuraFX();
+
+	UFUNCTION(BlueprintCallable)
+	void StopSpecialAuraFX();
 };
