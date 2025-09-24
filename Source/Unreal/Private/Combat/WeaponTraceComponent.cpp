@@ -61,7 +61,7 @@ void UWeaponTraceComponent::HandleTrace()
     QueryParams.AddIgnoredActor(ActorToIgnore);
 
     bool bHit = GetWorld()->SweepMultiByChannel(
-        OutHits, Start, End, WeaponHitbox->GetComponentQuat(), ECC_Pawn, Box, QueryParams
+        OutHits, Start, End, WeaponHitbox->GetComponentQuat(), ECollisionChannel::ECC_GameTraceChannel1, Box, QueryParams
     );
 
     if (bDebugMode)
