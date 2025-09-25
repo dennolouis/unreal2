@@ -9,6 +9,12 @@ DECLARE_DYNAMIC_MULTICAST_SPARSE_DELEGATE(
     UWeaponTraceComponent, OnSuccessfulHitDelegate
 );
 
+DECLARE_DYNAMIC_MULTICAST_SPARSE_DELEGATE_OneParam(
+    FOnWeaponClashSignature,
+    UWeaponTraceComponent, OnWeaponClashDelegate,
+    AActor*, HitActor
+);
+
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class UNREAL_API UWeaponTraceComponent : public UActorComponent
 {
@@ -41,6 +47,9 @@ public:
     UPROPERTY(BlueprintAssignable)
     FOnSuccessfulHitSignature OnSuccessfulHitDelegate;
 
+    UPROPERTY(BlueprintAssignable)
+    FOnWeaponClashSignature OnWeaponClashDelegate;
+
 protected:
     virtual void BeginPlay() override;
 
@@ -62,5 +71,10 @@ public:
 
     void SetActorToIgnore(AActor* Ignore) { ActorToIgnore = Ignore; };
     void SetWeaponStrength(float Strength) { WeaponStrength = Strength; }
+
+    bool GetIsAttacking() { return bIsAttacking; }
+
+private:
+    bool IsWeaponClashing();
 
 };

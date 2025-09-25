@@ -27,6 +27,11 @@ public:
     UPROPERTY(BlueprintReadWrite, EditAnywhere)
     class UWeaponTraceComponent* WeaponTraceComp;
 
+    UPROPERTY(BlueprintReadWrite, EditAnywhere)
+    ACharacter* CharacterRef;
+
     UFUNCTION(BlueprintCallable)
     UBoxComponent* GetWeaponHitbox() const { return WeaponHitbox; }
+
+    void SetCharacterRef(ACharacter* Character) { CharacterRef = Character; }
 };

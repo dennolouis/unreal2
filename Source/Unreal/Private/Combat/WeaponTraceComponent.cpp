@@ -1,4 +1,4 @@
-#include "Combat/WeaponTraceComponent.h"
+﻿#include "Combat/WeaponTraceComponent.h"
 #include "GameFramework/Actor.h"
 #include "Components/BoxComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -47,7 +47,7 @@ void UWeaponTraceComponent::SetWeaponHitBox(UBoxComponent* HitBox)
 
 void UWeaponTraceComponent::HandleTrace()
 {
-    if (!WeaponHitbox || !bIsAttacking) return;
+    if (!WeaponHitbox || !bIsAttacking || IsWeaponClashing()) return;
 
     FVector BoxExtent = WeaponHitbox->GetScaledBoxExtent();
     FVector Start = WeaponHitbox->GetComponentLocation();
@@ -86,4 +86,46 @@ void UWeaponTraceComponent::HandleTrace()
 
         OnSuccessfulHitDelegate.Broadcast();
     }
+}
+
+bool UWeaponTraceComponent::IsWeaponClashing()
+{
+    FVector BoxExtent = WeaponHitbox->GetScaledBoxExtent();
+    FVector Start = WeaponHitbox->GetComponentLocation();
+    FVector End = Start;
+
+    TArray<FHitResult> OutHits;
+    FCollisionShape Box = FCollisionShape::MakeBox(BoxExtent);
+    FCollisionQueryParams QueryParams;
+    QueryParams.AddIgnoredActors(TargetsToIgnore);
+    QueryParams.AddIgnoredActor(GetOwner());
+    QueryParams.AddIgnoredActor(ActorToIgnore);
+
+    TArray<FHitResult> OutClashHits;
+    bool bClashHit = GetWorld()->SweepMultiByChannel(
+        OutClashHits, Start, End, WeaponHitbox->GetComponentQuat(), ECC_Visibility, Box, QueryParams
+    );
+
+    for (const FHitResult& Hit : OutClashHits)
+    {
+        AActor* HitActor = Hit.GetActor();
+        if (!HitActor) continue;
+
+        // ✅ Check if we hit another weapon
+        UWeaponTraceComponent* OtherWeaponTrace = HitActor->FindComponentByClass<UWeaponTraceComponent>();
+        if (OtherWeaponTrace && OtherWeaponTrace->GetIsAttacking())
+        {
+            // Trigger clash logic
+            UE_LOG(LogTemp, Warning, TEXT("Weapon Clash Detected between %s and %s"),
+                *GetOwner()->GetName(), *HitActor->GetName());
+            
+            OnSuccessfulHitDelegate.Broadcast();
+            OnWeaponClashDelegate.Broadcast(HitActor);
+            
+            return true;
+        }
+    }
+
+
+    return false;
 }

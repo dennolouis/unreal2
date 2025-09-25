@@ -75,6 +75,7 @@ void ABossCharacter::BeginPlay()
 
 			PrimaryEquippedWeapon->WeaponTraceComp->SetActorToIgnore(this);
 			PrimaryEquippedWeapon->WeaponTraceComp->SetWeaponStrength(WeaponStrength);
+			PrimaryEquippedWeapon->SetCharacterRef(this);
 		}
 	}
 
@@ -90,6 +91,7 @@ void ABossCharacter::BeginPlay()
 
 			SecondaryEquippedWeapon->WeaponTraceComp->SetActorToIgnore(this);
 			SecondaryEquippedWeapon->WeaponTraceComp->SetWeaponStrength(WeaponStrength);
+			SecondaryEquippedWeapon->SetCharacterRef(this);
 		}
 	}
 }
