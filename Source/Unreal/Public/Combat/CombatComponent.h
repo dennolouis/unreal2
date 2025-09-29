@@ -35,6 +35,9 @@ class UNREAL_API UCombatComponent : public UActorComponent
 	UPROPERTY(EditAnywhere)
 	UAnimMontage* MovingHeavyAttackAnimation;
 
+	UPROPERTY(EditAnywhere)
+	UAnimMontage* WeaponClashAnimMontage;
+
 	ACharacter* CharacterRef;
 
 	UPROPERTY(VisibleAnywhere)

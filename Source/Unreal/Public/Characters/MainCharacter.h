@@ -19,6 +19,9 @@ class UNREAL_API AMainCharacter : public ACharacter, public IMainplayer, public 
 	UPROPERTY(EditAnywhere)
 	TArray<UAnimMontage*> HurtAnimMontages;
 
+	UPROPERTY(EditAnywhere)
+	UAnimMontage* WeaponClashAnimMontage;
+
 public:
 	// Sets default values for this character's properties
 	AMainCharacter();
@@ -106,6 +109,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void PlayHurtAnim(AActor* Attacker, TSubclassOf<class UCameraShakeBase> CameraShakeTemplate);
+
+	UFUNCTION(BlueprintCallable)
+	void PlayWeaponClashAnim(AActor* OtherWeaponOwner, float PushStrength, TSubclassOf<class UCameraShakeBase> CameraShakeTemplate);
 
 	UFUNCTION(BlueprintCallable)
 	void CustomJump();

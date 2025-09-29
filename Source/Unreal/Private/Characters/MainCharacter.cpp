@@ -171,6 +171,39 @@ void AMainCharacter::PlayHurtAnim(AActor* Attacker, TSubclassOf<class UCameraSha
 	}
 }
 
+void AMainCharacter::PlayWeaponClashAnim(AActor* OtherWeaponOwner, float PushStrength, TSubclassOf<class UCameraShakeBase> CameraShakeTemplate)
+{
+	if (WeaponClashAnimMontage)
+	{
+		PlayAnimMontage(WeaponClashAnimMontage);
+	}
+
+	// Clear input so player can't buffer during the clash
+	if (CombatComp)
+	{
+		CombatComp->ClearBufferedInput();
+	}
+
+	// Camera shake for feedback
+	if (CameraShakeTemplate)
+	{
+		if (APlayerController* PC = Cast<APlayerController>(GetController()))
+		{
+			PC->ClientStartCameraShake(CameraShakeTemplate);
+		}
+	}
+
+	// Pushback effect
+	if (OtherWeaponOwner)
+	{
+		FVector PushDirection = GetActorLocation() - OtherWeaponOwner->GetActorLocation();
+		PushDirection.Z = 0.0f; // ignore vertical push
+		PushDirection.Normalize();
+
+		LaunchCharacter(PushDirection * PushStrength, true, false);
+	}
+}
+
 void AMainCharacter::CustomJump()
 {
 	if ((CombatComp && !CombatComp->CanInterruptAnimation()) || IsPlayingHurtAnimation())
