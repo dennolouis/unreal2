@@ -194,7 +194,7 @@ void AMainCharacter::PlayWeaponClashAnim(AActor* OtherWeaponOwner, float PushStr
 	}
 
 	// Pushback effect
-	if (OtherWeaponOwner)
+	if (PushStrength != 0 && OtherWeaponOwner)
 	{
 		FVector PushDirection = GetActorLocation() - OtherWeaponOwner->GetActorLocation();
 		PushDirection.Z = 0.0f; // ignore vertical push
@@ -273,8 +273,8 @@ bool AMainCharacter::IsPlayingHurtAnimation() const
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	UAnimMontage* CurrentMontage = AnimInstance->GetCurrentActiveMontage();
 
-	// Check if the current montage is in the HurtAnimMontages array
-	return HurtAnimMontages.Contains(CurrentMontage);
+	// Check if the current montage is in the HurtAnimMontages array or if the weapon clash anim is playing
+	return HurtAnimMontages.Contains(CurrentMontage) || CurrentMontage == WeaponClashAnimMontage;
 }
 
 void AMainCharacter::PlayAuraFX()
