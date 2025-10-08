@@ -208,8 +208,6 @@ void AMainCharacter::CustomJump()
 {
 	if ((CombatComp && !CombatComp->CanInterruptAnimation()) || IsPlayingHurtAnimation())
 	{
-		CombatComp->ClearBufferedInput();
-
 		IMainplayer* IPlayerRef{ Cast<IMainplayer>(this) };
 
 		if (IPlayerRef && !IPlayerRef->HasEnoughStamina(AnimCancelStaminaCost))
@@ -221,6 +219,8 @@ void AMainCharacter::CustomJump()
 		{
 			StatsComp->ReduceStamina(AnimCancelStaminaCost);
 		}
+
+		CombatComp->ClearBufferedInput();
 	}
 
 	StopAnimMontage();
