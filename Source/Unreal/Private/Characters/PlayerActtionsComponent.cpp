@@ -48,23 +48,32 @@ void UPlayerActtionsComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 
 void UPlayerActtionsComponent::Sprint()
 {
-	if (!IPlayerRef->HasEnoughStamina(SprintCost)) {
-		Walk();
+	const bool bCanSprint = IPlayerRef->HasEnoughStamina(SprintCost);
+	const bool bIsMoving = MovementComp->Velocity.SizeSquared() > 10.f;
+
+	// If player can't sprint or isn't moving, cancel sprint
+	if (!bCanSprint || !bIsMoving)
+	{
+		if (bIsSprinting)
+		{
+			Walk(); // reset speed & FOV
+		}
 		return;
 	}
 
-	if (MovementComp->Velocity.Equals(FVector::ZeroVector, 1)) { return; }
-
-	MovementComp->MaxWalkSpeed = SprintSpeed;
-
-
-	OnSprintDelegate.Broadcast(SprintCost);
-
-	if (!bIsSprinting)
+	// If already sprinting, no need to reapply FOV every frame
+	if (bIsSprinting)
 	{
-		SetCameraFOV(SprintFOV, FOVTransitionTime);
-		bIsSprinting = true;
+		MovementComp->MaxWalkSpeed = SprintSpeed;
+		OnSprintDelegate.Broadcast(SprintCost);
+		return;
 	}
+
+	// Just started sprinting
+	bIsSprinting = true;
+	MovementComp->MaxWalkSpeed = SprintSpeed;
+	SetCameraFOV(SprintFOV, FOVTransitionTime);
+	OnSprintDelegate.Broadcast(SprintCost);
 }
 
 void UPlayerActtionsComponent::Walk()
