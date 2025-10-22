@@ -88,46 +88,73 @@ void UPlayerActtionsComponent::Walk()
 
 void UPlayerActtionsComponent::Roll()
 {
-	if (bIsRollActive || !IPlayerRef->HasEnoughStamina(RollCost))
+	// --- CASE 1: Already rolling, attempt "chain roll" ---
+	if (bIsRollActive)
+	{
+		// Define cost and teleport distance
+		const float ChainRollCost = RollCost * 1.25f; // slightly more expensive, optional
+		const float ChainRollDistance = 300.f; // tweak to your liking
+
+		if (IPlayerRef->HasEnoughStamina(ChainRollCost))
+		{
+			// Spend stamina and perform small forward teleport
+			OnRollDelegate.Broadcast(ChainRollCost);
+
+			FVector ForwardDir = CharacterRef->GetActorForwardVector().GetSafeNormal();
+			FVector TeleportTarget = CharacterRef->GetActorLocation() + ForwardDir * ChainRollDistance;
+
+			// Optional: ensure no collision issue
+			FHitResult Hit;
+			CharacterRef->SetActorLocation(TeleportTarget, true, &Hit, ETeleportType::TeleportPhysics);
+
+			// Optional: Add camera shake or short trail VFX here
+
+			// Optional: reset roll timer if you want to “extend” roll duration
+			// CharacterRef->GetWorldTimerManager().ClearTimer(RollTimerHandle);
+			// CharacterRef->GetWorldTimerManager().SetTimer(RollTimerHandle, this, &UPlayerActtionsComponent::FinishRollAnim, Duration, false);
+
+			return;
+		}
+		else
+		{
+			// Not enough stamina, ignore input
+			return;
+		}
+	}
+
+	// --- CASE 2: Normal roll start ---
+	if (!IPlayerRef->HasEnoughStamina(RollCost))
 	{
 		return;
 	}
 
-	bool bCanclledAttack{ false };
+	bool bCancelledAttack = false;
+	AMainCharacter* MainCharacterRef = Cast<AMainCharacter>(CharacterRef);
 
-	AMainCharacter* MainCharacterRef{ Cast<AMainCharacter>(CharacterRef) };
-
-	// Dash canel takes up more stamina
-	if (MainCharacterRef && MainCharacterRef->CombatComp && !MainCharacterRef->CombatComp->CanInterruptAnimation()) 
+	if (MainCharacterRef && MainCharacterRef->CombatComp && !MainCharacterRef->CombatComp->CanInterruptAnimation())
 	{
 		if (!IPlayerRef->HasEnoughStamina(MainCharacterRef->AnimCancelStaminaCost))
 		{
 			return;
 		}
-		bCanclledAttack = true;
+		bCancelledAttack = true;
 	}
 
 	bIsRollActive = true;
 
-	OnRollDelegate.Broadcast(bCanclledAttack ? MainCharacterRef->AnimCancelStaminaCost : RollCost);
+	OnRollDelegate.Broadcast(bCancelledAttack ? MainCharacterRef->AnimCancelStaminaCost : RollCost);
 
-	FVector Direction{
-		CharacterRef->GetCharacterMovement()->Velocity.Length() < 1 ?
+	FVector Direction = CharacterRef->GetCharacterMovement()->Velocity.Length() < 1 ?
 		CharacterRef->GetActorForwardVector() :
-		CharacterRef->GetLastMovementInputVector()
-	};
+		CharacterRef->GetLastMovementInputVector();
 
-	FRotator NewRot{ UKismetMathLibrary::MakeRotFromX(Direction) };
-
+	FRotator NewRot = UKismetMathLibrary::MakeRotFromX(Direction);
 	CharacterRef->SetActorRotation(NewRot);
 
-	int RandomIndex{
-		FMath::RandRange(0, RollAnimMontages.Num() - 1)
-	};
+	int RandomIndex = FMath::RandRange(0, RollAnimMontages.Num() - 1);
+	float Duration = CharacterRef->PlayAnimMontage(RollAnimMontages[RandomIndex]);
 
-	float Duration{ CharacterRef->PlayAnimMontage(RollAnimMontages[RandomIndex])};
 	FTimerHandle RollTimerHandle;
-
 	CharacterRef->GetWorldTimerManager().SetTimer(
 		RollTimerHandle,
 		this,
