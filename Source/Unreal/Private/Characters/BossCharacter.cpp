@@ -33,6 +33,8 @@ ABossCharacter::ABossCharacter()
 	GatherEffectSpawnPoint = CreateDefaultSubobject<USceneComponent>(TEXT("Gather Effect Spawn Point"));
 	GatherEffectSpawnPoint->SetupAttachment(RootComponent);
 
+	Tags.Add(FName("Enemy"));
+
 }
 
 // Called when the game starts or when spawned

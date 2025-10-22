@@ -9,6 +9,7 @@
 #include "Characters/MainCharacter.h"
 #include "Combat/CombatComponent.h"
 #include "Camera/CameraComponent.h"
+#include <Kismet/GameplayStatics.h>
 
 
 // Sets default values for this component's properties
@@ -88,41 +89,71 @@ void UPlayerActtionsComponent::Walk()
 
 void UPlayerActtionsComponent::Roll()
 {
-	// --- CASE 1: Already rolling, attempt "chain roll" ---
+	// --- CASE 1: Already rolling — perform "chain roll" teleport ---
 	if (bIsRollActive)
 	{
-		// Define cost and teleport distance
-		const float ChainRollCost = RollCost * 1.25f; // slightly more expensive, optional
-		const float ChainRollDistance = 300.f; // tweak to your liking
+		const float ChainRollCost = RollCost * 1.25f;    // Slightly higher cost for chaining
+		const float ChainRollDistance = 300.f;            // How far the player teleports
 
 		if (IPlayerRef->HasEnoughStamina(ChainRollCost))
 		{
-			// Spend stamina and perform small forward teleport
+			// Consume stamina
 			OnRollDelegate.Broadcast(ChainRollCost);
 
 			FVector ForwardDir = CharacterRef->GetActorForwardVector().GetSafeNormal();
-			FVector TeleportTarget = CharacterRef->GetActorLocation() + ForwardDir * ChainRollDistance;
+			FVector StartLocation = CharacterRef->GetActorLocation();
+			FVector EndLocation = StartLocation + ForwardDir * ChainRollDistance;
 
-			// Optional: ensure no collision issue
+			// --- Trace ahead to check for obstacles (ignore enemies) ---
+			FCollisionQueryParams TraceParams;
+			TraceParams.AddIgnoredActor(CharacterRef); // ignore self
+			TraceParams.bTraceComplex = false;
+
 			FHitResult Hit;
-			CharacterRef->SetActorLocation(TeleportTarget, true, &Hit, ETeleportType::TeleportPhysics);
+			bool bHit = CharacterRef->GetWorld()->LineTraceSingleByChannel(
+				Hit,
+				StartLocation,
+				EndLocation,
+				ECC_Visibility,
+				TraceParams
+			);
 
-			// Optional: Add camera shake or short trail VFX here
+			// If we hit something that's NOT an enemy, stop before it
+			if (bHit && Hit.GetActor() && !Hit.GetActor()->ActorHasTag("Enemy"))
+			{
+				EndLocation = Hit.Location - ForwardDir * 10.f; // stop just before obstacle
+			}
 
-			// Optional: reset roll timer if you want to “extend” roll duration
-			// CharacterRef->GetWorldTimerManager().ClearTimer(RollTimerHandle);
-			// CharacterRef->GetWorldTimerManager().SetTimer(RollTimerHandle, this, &UPlayerActtionsComponent::FinishRollAnim, Duration, false);
+			// Teleport directly — no sweep (we already handled collisions)
+			CharacterRef->SetActorLocation(EndLocation, false, nullptr, ETeleportType::TeleportPhysics);
 
+			if (ChainRollEffect)
+			{
+				UGameplayStatics::SpawnEmitterAtLocation(
+					GetWorld(),
+					ChainRollEffect,
+					EndLocation,
+					CharacterRef->GetActorRotation(),
+					FVector(1.0f),    // Scale of the effect
+					true              // AutoDestroy when finished
+				);
+			}
+
+//#if WITH_EDITOR
+//			// Debug line to visualize teleport path
+//			DrawDebugLine(GetWorld(), StartLocation, EndLocation, FColor::Cyan, false, 1.0f, 0, 2.0f);
+//#endif
+
+			// Optional: spawn a small trail or VFX here if desired
 			return;
 		}
 		else
 		{
-			// Not enough stamina, ignore input
-			return;
+			return; // Not enough stamina
 		}
 	}
 
-	// --- CASE 2: Normal roll start ---
+	// --- CASE 2: Start normal roll ---
 	if (!IPlayerRef->HasEnoughStamina(RollCost))
 	{
 		return;
@@ -131,6 +162,7 @@ void UPlayerActtionsComponent::Roll()
 	bool bCancelledAttack = false;
 	AMainCharacter* MainCharacterRef = Cast<AMainCharacter>(CharacterRef);
 
+	// Handle attack canceling
 	if (MainCharacterRef && MainCharacterRef->CombatComp && !MainCharacterRef->CombatComp->CanInterruptAnimation())
 	{
 		if (!IPlayerRef->HasEnoughStamina(MainCharacterRef->AnimCancelStaminaCost))
@@ -144,6 +176,7 @@ void UPlayerActtionsComponent::Roll()
 
 	OnRollDelegate.Broadcast(bCancelledAttack ? MainCharacterRef->AnimCancelStaminaCost : RollCost);
 
+	// Determine roll direction
 	FVector Direction = CharacterRef->GetCharacterMovement()->Velocity.Length() < 1 ?
 		CharacterRef->GetActorForwardVector() :
 		CharacterRef->GetLastMovementInputVector();
@@ -151,9 +184,11 @@ void UPlayerActtionsComponent::Roll()
 	FRotator NewRot = UKismetMathLibrary::MakeRotFromX(Direction);
 	CharacterRef->SetActorRotation(NewRot);
 
+	// Play random roll animation
 	int RandomIndex = FMath::RandRange(0, RollAnimMontages.Num() - 1);
 	float Duration = CharacterRef->PlayAnimMontage(RollAnimMontages[RandomIndex]);
 
+	// Set timer to end roll
 	FTimerHandle RollTimerHandle;
 	CharacterRef->GetWorldTimerManager().SetTimer(
 		RollTimerHandle,
@@ -163,6 +198,7 @@ void UPlayerActtionsComponent::Roll()
 		false
 	);
 }
+
 
 void UPlayerActtionsComponent::FinishRollAnim()
 {

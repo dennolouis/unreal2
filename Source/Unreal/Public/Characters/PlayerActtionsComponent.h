@@ -70,6 +70,9 @@ public:
 
 	FTimerHandle FOVHandle;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Roll")
+	UParticleSystem* ChainRollEffect;
+
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
