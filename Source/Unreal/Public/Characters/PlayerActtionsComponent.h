@@ -44,6 +44,12 @@ class UNREAL_API UPlayerActtionsComponent : public UActorComponent
 	UPROPERTY(EditAnywhere)
 	float RollCost{ 5.0f };
 
+	UPROPERTY(EditAnywhere)
+	float TeleportDistance{ 300.0f };
+
+	UPROPERTY(EditAnywhere)
+	class USoundWave* TeleportSound;
+
 public:	
 	// Sets default values for this component's properties
 	UPlayerActtionsComponent();

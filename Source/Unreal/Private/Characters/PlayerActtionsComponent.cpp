@@ -93,7 +93,6 @@ void UPlayerActtionsComponent::Roll()
 	if (bIsRollActive)
 	{
 		const float ChainRollCost = RollCost * 1.25f;    // Slightly higher cost for chaining
-		const float ChainRollDistance = 300.f;            // How far the player teleports
 
 		if (IPlayerRef->HasEnoughStamina(ChainRollCost))
 		{
@@ -102,7 +101,7 @@ void UPlayerActtionsComponent::Roll()
 
 			FVector ForwardDir = CharacterRef->GetActorForwardVector().GetSafeNormal();
 			FVector StartLocation = CharacterRef->GetActorLocation();
-			FVector EndLocation = StartLocation + ForwardDir * ChainRollDistance;
+			FVector EndLocation = StartLocation + ForwardDir * TeleportDistance;
 
 			// --- Trace ahead to check for obstacles (ignore enemies) ---
 			FCollisionQueryParams TraceParams;
@@ -129,6 +128,11 @@ void UPlayerActtionsComponent::Roll()
 
 			if (ChainRollEffect)
 			{
+				if (TeleportSound)
+				{
+					UGameplayStatics::PlaySoundAtLocation(GetWorld(), TeleportSound, EndLocation);
+				}
+
 				UGameplayStatics::SpawnEmitterAtLocation(
 					GetWorld(),
 					ChainRollEffect,
