@@ -77,3 +77,5 @@ Content/FlexibleCombatSystem/*
 
 # Don't track large assets that can be restored from external content
 FAB-Assets/
+
+UI/Controller-Icons/
