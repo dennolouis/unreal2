@@ -1,6 +1,8 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
+#include "Camera/CameraComponent.h"
+#include "GameFramework/Actor.h"
+#include "GameFramework/SpringArmComponent.h"
 #include "Characters/CameraModeComponent.h"
 
 // Sets default values for this component's properties
@@ -19,16 +21,80 @@ void UCameraModeComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// ...
+	if (!CameraBoom)
+	{
+		CameraBoom = GetOwner()->FindComponentByClass<USpringArmComponent>();
+	}
+
+	if (!FollowCamera)
+	{
+		FollowCamera = GetOwner()->FindComponentByClass<UCameraComponent>();
+	}
+
+	ApplyCameraMode(CurrentCameraMode);
 	
 }
 
+
+void UCameraModeComponent::SwitchCameraMode()
+{
+	if (CurrentCameraMode == ECameraMode::ThirdPerson)
+		ApplyCameraMode(ECameraMode::TopDownSide);
+	else
+		ApplyCameraMode(ECameraMode::ThirdPerson);
+}
+
+void UCameraModeComponent::ApplyCameraMode(ECameraMode NewMode)
+{
+	if (!CameraBoom) return;
+
+	CurrentCameraMode = NewMode;
+	const FCameraModeSettings* Settings = nullptr;
+
+	switch (NewMode)
+	{
+	case ECameraMode::ThirdPerson:
+		Settings = &SoulsLikeCameraSettings;
+		break;
+	case ECameraMode::TopDownSide:
+		Settings = &TopDownSideCameraSettings;
+		break;
+	}
+
+	if (Settings)
+	{
+		CameraBoom->TargetArmLength = Settings->TargetArmLength;
+		CameraBoom->SetRelativeLocation(Settings->RelativeLocation);
+		CameraBoom->SetRelativeRotation(Settings->RelativeRotation);
+		CameraBoom->bUsePawnControlRotation = Settings->bUsePawnControlRotation;
+		
+		if (Settings->bDetachCamera)
+		{
+			CameraBoom->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+		}
+		else
+		{
+			CameraBoom->AttachToComponent(GetOwner()->GetRootComponent(), FAttachmentTransformRules::SnapToTargetIncludingScale);
+		}
+	}
+}
 
 // Called every frame
 void UCameraModeComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	// ...
+	if (CurrentCameraMode == ECameraMode::TopDownSide && CameraBoom)
+	{
+		// Desired follow location: follow player but keep fixed X
+		FVector PlayerLoc = GetOwner()->GetActorLocation();
+		FVector CameraLoc = CameraBoom->GetComponentLocation();
+
+		FVector TargetLoc(CameraLoc.X, PlayerLoc.Y, PlayerLoc.Z + 300.f);
+
+		// Smooth follow
+		FVector NewLoc = FMath::VInterpTo(CameraLoc, TargetLoc, DeltaTime, 5.f);
+		CameraBoom->SetWorldLocation(NewLoc);
+	}
 }
 

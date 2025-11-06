@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 
 UENUM(BlueprintType)
-enum ECameraMode
+enum ECameraMode : uint8
 {
 	ThirdPerson UMETA(DisplayName = "Third Person"),
 	TopDownSide UMETA(DisplayName = "Top Down Side")
