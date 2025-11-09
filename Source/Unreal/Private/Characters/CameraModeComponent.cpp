@@ -2,6 +2,8 @@
 
 #include "Camera/CameraComponent.h"
 #include "GameFramework/Actor.h"
+#include "GameFramework/Character.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Characters/CameraModeComponent.h"
 
@@ -46,7 +48,11 @@ void UCameraModeComponent::SwitchCameraMode()
 
 void UCameraModeComponent::ApplyCameraMode(ECameraMode NewMode)
 {
-	if (!CameraBoom) return;
+
+	ACharacter* Character = Cast<ACharacter>(GetOwner());
+	APlayerController* PC = Cast<APlayerController>(Character->GetController());
+
+	if (!Character || !PC || !CameraBoom) return;
 
 	CurrentCameraMode = NewMode;
 	const FCameraModeSettings* Settings = nullptr;
@@ -55,9 +61,13 @@ void UCameraModeComponent::ApplyCameraMode(ECameraMode NewMode)
 	{
 	case ECameraMode::ThirdPerson:
 		Settings = &SoulsLikeCameraSettings;
+		Character->bUseControllerRotationYaw = true;
+		PC->SetIgnoreLookInput(false);  // Re-enable mouse camera control
 		break;
 	case ECameraMode::TopDownSide:
 		Settings = &TopDownSideCameraSettings;
+		Character->bUseControllerRotationYaw = false;
+		PC->SetIgnoreLookInput(true);  // Disable mouse camera control
 		break;
 	}
 
@@ -90,7 +100,7 @@ void UCameraModeComponent::TickComponent(float DeltaTime, ELevelTick TickType, F
 		FVector PlayerLoc = GetOwner()->GetActorLocation();
 		FVector CameraLoc = CameraBoom->GetComponentLocation();
 
-		FVector TargetLoc(CameraLoc.X, PlayerLoc.Y, PlayerLoc.Z + 300.f);
+		FVector TargetLoc(CameraLoc.X, PlayerLoc.Y, PlayerLoc.Z + TopDownSideCameraSettings.RelativeLocation.Z);
 
 		// Smooth follow
 		FVector NewLoc = FMath::VInterpTo(CameraLoc, TargetLoc, DeltaTime, 5.f);

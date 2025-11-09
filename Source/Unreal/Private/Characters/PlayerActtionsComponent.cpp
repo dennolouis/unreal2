@@ -89,6 +89,7 @@ void UPlayerActtionsComponent::Walk()
 
 void UPlayerActtionsComponent::Roll()
 {
+	AMainCharacter* MainCharacterRef = Cast<AMainCharacter>(CharacterRef);
 	// --- CASE 1: Already rolling — perform "chain roll" teleport ---
 	if (bIsRollActive)
 	{
@@ -117,10 +118,41 @@ void UPlayerActtionsComponent::Roll()
 				TraceParams
 			);
 
-			// If we hit something that's NOT an enemy, stop before it
-			if (bHit && Hit.GetActor() && !Hit.GetActor()->ActorHasTag("Enemy"))
+			if (bHit && Hit.GetActor())
 			{
-				EndLocation = Hit.Location - ForwardDir * 10.f; // stop just before obstacle
+				AActor* HitActor = Hit.GetActor();
+
+				if (HitActor->ActorHasTag("Enemy"))
+				{
+					// --- TELEPORT BEHIND ENEMY ---
+					FVector EnemyForward = HitActor->GetActorForwardVector();
+					FVector EnemyLocation = HitActor->GetActorLocation();
+
+					// Distance behind enemy (adjustable)
+					const float BehindOffset = 25.f; // closer than TeleportDistance
+					EndLocation = EnemyLocation - EnemyForward * BehindOffset;
+
+					// Optional: keep player on same floor height
+					EndLocation.Z = StartLocation.Z;
+
+					// --- FACE THE ENEMY AFTER TELEPORT ---
+					FVector ToEnemy = EnemyLocation - EndLocation;
+					ToEnemy.Z = 0.f; // ignore vertical tilt
+					ToEnemy.Normalize();
+
+					FRotator NewRotation = UKismetMathLibrary::MakeRotFromX(ToEnemy);
+					CharacterRef->SetActorRotation(NewRotation);
+
+					if (MainCharacterRef && MainCharacterRef->CombatComp)
+					{
+						MainCharacterRef->CombatComp->StopAttackAnimation();
+					}
+				}
+				else
+				{
+					// --- OBSTACLE HIT: stop before it ---
+					EndLocation = Hit.Location - ForwardDir * 10.f;
+				}
 			}
 
 			// Teleport directly — no sweep (we already handled collisions)
@@ -164,7 +196,6 @@ void UPlayerActtionsComponent::Roll()
 	}
 
 	bool bCancelledAttack = false;
-	AMainCharacter* MainCharacterRef = Cast<AMainCharacter>(CharacterRef);
 
 	// Handle attack canceling
 	if (MainCharacterRef && MainCharacterRef->CombatComp && !MainCharacterRef->CombatComp->CanInterruptAnimation())
