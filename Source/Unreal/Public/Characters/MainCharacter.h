@@ -65,6 +65,9 @@ public:
 	UPROPERTY(EditAnywhere)
 	double AnimCancelStaminaCost{ 30.0 };
 
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	bool bIsSideScroller{ false };
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effects")
 	USceneComponent* AuraEffectSpawnPoint;
 
