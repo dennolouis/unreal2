@@ -20,17 +20,34 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Camera Look")
     void ApplyLookInput(FVector2D LookInput);
 
-    /** How far camera pans (in UU) */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera Look")
-    float MaxLookOffset = 120.f;
+    // === CONFIG ===
+    UPROPERTY(EditAnywhere, Category = "Camera")
+    float MaxVerticalOffset = 50.f;
 
-    /** How quickly the camera moves to the target */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera Look")
-    float InterpSpeed = 7.f;
+    UPROPERTY(EditAnywhere, Category = "Camera")
+    float MaxYawRotation = 20.f;
 
-    /** Optional: specify a component name to search for (ex: CameraRoot) */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera Look")
-    FName CameraRootName = TEXT("CameraRoot");
+    UPROPERTY(EditAnywhere, Category = "Camera")
+    float VerticalInterpSpeed = 6.f;
+
+    UPROPERTY(EditAnywhere, Category = "Camera")
+    float RotationInterpSpeed = 6.f;
+
+    UPROPERTY(EditAnywhere, Category = "Camera")
+    float BaseYaw = 0.f;  // Default camera facing direction (often 0 or 90)
+
+    UPROPERTY(EditAnywhere, Category = "Camera")
+    float MinYaw = -20.f;
+
+    UPROPERTY(EditAnywhere, Category = "Camera")
+    float MaxYaw = 20.f;
+
+private:
+
+    class USpringArmComponent* CameraBoom = nullptr;
+
+    float TargetVerticalOffset = 0.f;
+    float TargetRelativeYaw = 0.f;
 
 protected:
 	// Called when the game starts
@@ -39,11 +56,4 @@ protected:
 public:	
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-
-private:
-    /** Cached CameraRoot (SceneComponent) */
-    UPROPERTY()
-    USceneComponent* CameraRoot;
-
-    FVector TargetOffset;
 };

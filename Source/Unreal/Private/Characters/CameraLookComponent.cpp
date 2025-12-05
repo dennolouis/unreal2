@@ -1,5 +1,6 @@
 #include "Characters/CameraLookComponent.h"
 #include "GameFramework/Actor.h"
+#include "GameFramework/SpringArmComponent.h"
 #include "Components/SceneComponent.h"
 
 UCameraLookComponent::UCameraLookComponent()
@@ -11,40 +12,26 @@ void UCameraLookComponent::BeginPlay()
 {
     Super::BeginPlay();
 
-    // Option 1: Find by name (recommended for predictable setup)
-    if (!CameraRootName.IsNone())
-    {
-        CameraRoot = Cast<USceneComponent>(
-            GetOwner()->GetDefaultSubobjectByName(CameraRootName)
-        );
-    }
+    // Find the CameraBoom automatically
+    CameraBoom = GetOwner()->FindComponentByClass<USpringArmComponent>();
 
-    // Option 2: fallback - first scene component (optional)
-    if (!CameraRoot)
+    if (!CameraBoom)
     {
-        CameraRoot = GetOwner()->FindComponentByClass<USceneComponent>();
-    }
-
-    if (!CameraRoot)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("CameraLookComponent: No CameraRoot found."));
+        UE_LOG(LogTemp, Warning, TEXT("CameraLookComponent: No SpringArm found on Owner!"));
     }
 }
 
 void UCameraLookComponent::ApplyLookInput(FVector2D LookInput)
 {
-    if (!GetOwner()) return;
+    // Clamp input to avoid mouse flick oversized values
+    float X = FMath::Clamp(LookInput.X, -1.f, 1.f);
+    float Y = FMath::Clamp(LookInput.Y, -1.f, 1.f);
 
-    // Character right/left direction
-    const FVector Right = GetOwner()->GetActorRightVector();
+    // Vertical: convert to target offset
+    TargetVerticalOffset = Y * MaxVerticalOffset;
 
-    // Vertical offset always uses world up
-    const FVector Up = FVector::UpVector;
-
-    // Build world-space target offset
-    TargetOffset =
-        (Right * LookInput.X * MaxLookOffset) +
-        (Up * LookInput.Y * MaxLookOffset);
+    // Horizontal: convert to desired yaw rotation
+    TargetRelativeYaw = X * MaxYawRotation;
 }
 
 void UCameraLookComponent::TickComponent(
@@ -53,22 +40,27 @@ void UCameraLookComponent::TickComponent(
 {
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-    if (!CameraRoot || !GetOwner()) return;
+    if (!CameraBoom)
+        return;
 
-    // Where the boom *should* be (world space)
-    const FVector TargetWorldLocation =
-        GetOwner()->GetActorLocation() + TargetOffset;
+    // ====== 1. Vertical Camera Offset (socket offset) ======
+    FVector CurrentOffset = CameraBoom->SocketOffset;
 
-    // Current boom world location
-    const FVector CurrentLocation = CameraRoot->GetComponentLocation();
-
-    // Smooth interpolate
-    const FVector NewLocation = FMath::VInterpTo(
-        CurrentLocation,
-        TargetWorldLocation,
+    float NewZ = FMath::FInterpTo(
+        CurrentOffset.Z,
+        TargetVerticalOffset,
         DeltaTime,
-        InterpSpeed
+        VerticalInterpSpeed
     );
 
-    CameraRoot->SetWorldLocation(NewLocation);
+    float NewY = FMath::FInterpTo(
+        CurrentOffset.Y,
+        TargetRelativeYaw,
+        DeltaTime,
+        VerticalInterpSpeed
+    );
+
+    CurrentOffset.Z = NewZ;
+	CurrentOffset.Y = NewY;
+    CameraBoom->SocketOffset = CurrentOffset;
 }
