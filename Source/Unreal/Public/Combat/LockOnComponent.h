@@ -49,6 +49,9 @@ protected:
 	UPROPERTY(EditAnywhere)
 	double BreakDistance{ 1000.0 };
 
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	bool bIsSideScroller{ false };
+
 public:	
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;

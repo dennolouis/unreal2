@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "Characters/PlayerActtionsComponent.h"
@@ -90,7 +90,7 @@ void UPlayerActtionsComponent::Walk()
 void UPlayerActtionsComponent::Roll()
 {
 	AMainCharacter* MainCharacterRef = Cast<AMainCharacter>(CharacterRef);
-	// --- CASE 1: Already rolling — perform "chain roll" teleport ---
+	// --- CASE 1: Already rolling â€” perform "chain roll" teleport ---
 	if (bIsRollActive)
 	{
 		const float ChainRollCost = RollCost * 1.25f;    // Slightly higher cost for chaining
@@ -155,7 +155,7 @@ void UPlayerActtionsComponent::Roll()
 				}
 			}
 
-			// Teleport directly — no sweep (we already handled collisions)
+			// Teleport directly â€” no sweep (we already handled collisions)
 			CharacterRef->SetActorLocation(EndLocation, false, nullptr, ETeleportType::TeleportPhysics);
 
 			if (ChainRollEffect)

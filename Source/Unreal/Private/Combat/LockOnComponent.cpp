@@ -58,11 +58,14 @@ void ULockOnComponent::StartLockOn(float Radius)
 
 	CurrentTargetActor = OutResult.GetActor();
 
-	Controller->SetIgnoreLookInput(true);
-	//MovementComp->bOrientRotationToMovement = false;
-	MovementComp->bUseControllerDesiredRotation = true;
+	if (!bIsSideScroller)
+	{
+		Controller->SetIgnoreLookInput(true);
+		//MovementComp->bOrientRotationToMovement = false;
+		MovementComp->bUseControllerDesiredRotation = true;
 
-	SpringArmComp->TargetOffset = FVector{ 0.0, 0.0, 100.0 };
+		SpringArmComp->TargetOffset = FVector{ 0.0, 0.0, 100.0 };
+	}
 
 	IEnemy::Execute_OnSelect(CurrentTargetActor);
 
@@ -135,13 +138,14 @@ void ULockOnComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 		return;
 	}
 
-	TargetLocation.Z -= 125; //adjusting so the camera looks more downward
+	if (!bIsSideScroller)
+	{
+		TargetLocation.Z -= 125; //adjusting so the camera looks more downward
 
-	FRotator NewRotation{ UKismetMathLibrary::FindLookAtRotation(
-		CurrentLocation, TargetLocation
-	) };
-
-	Controller->SetControlRotation(NewRotation);
-
+		FRotator NewRotation{ UKismetMathLibrary::FindLookAtRotation(
+			CurrentLocation, TargetLocation
+		) };
+		Controller->SetControlRotation(NewRotation);
+	}
 }
 
