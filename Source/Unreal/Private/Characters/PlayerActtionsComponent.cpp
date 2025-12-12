@@ -101,7 +101,7 @@ void UPlayerActtionsComponent::Roll()
 			OnRollDelegate.Broadcast(ChainRollCost);
 
 			FVector ForwardDir = CharacterRef->GetActorForwardVector().GetSafeNormal();
-			FVector StartLocation = CharacterRef->GetActorLocation();
+			FVector StartLocation = CharacterRef->GetActorLocation() + FVector(0, 0, 20);
 			FVector EndLocation = StartLocation + ForwardDir * TeleportDistance;
 
 			// --- Trace ahead to check for obstacles (ignore enemies) ---
@@ -114,13 +114,15 @@ void UPlayerActtionsComponent::Roll()
 				Hit,
 				StartLocation,
 				EndLocation,
-				ECC_Visibility,
+				ECC_Pawn,
 				TraceParams
 			);
 
 			if (bHit && Hit.GetActor())
 			{
 				AActor* HitActor = Hit.GetActor();
+
+				UE_LOG(LogTemp, Warning, TEXT("Chain Roll Hit Actor: %s"), *HitActor->GetName());
 
 				if (HitActor->ActorHasTag("Enemy"))
 				{
@@ -153,6 +155,10 @@ void UPlayerActtionsComponent::Roll()
 					// --- OBSTACLE HIT: stop before it ---
 					EndLocation = Hit.Location - ForwardDir * 10.f;
 				}
+			}
+			else
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Chain Roll: No Hit Detected"));
 			}
 
 			// Teleport directly — no sweep (we already handled collisions)
