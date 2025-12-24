@@ -1,8 +1,8 @@
-﻿// CameraFramingComponent.cpp
-
-#include "Characters/CameraFramingComponent.h"
+﻿#include "Characters/CameraFramingComponent.h"
+#include "Components/SceneComponent.h"
 #include "GameFramework/SpringArmComponent.h"
-#include "Kismet/KismetMathLibrary.h"
+#include "Characters/CameraFramingComponent.h"
+
 
 UCameraFramingComponent::UCameraFramingComponent()
 {
@@ -13,28 +13,46 @@ void UCameraFramingComponent::BeginPlay()
 {
     Super::BeginPlay();
 
-    AActor* Owner = GetOwner();
-
-    // --- Find player ---
-    PlayerActor = Owner;
+    PlayerActor = GetOwner();
 
     if (!PlayerActor)
     {
-        UE_LOG(LogTemp, Error, TEXT("[CameraFramingComponent] No Player Pawn found!"));
+        UE_LOG(LogTemp, Error, TEXT("[CameraFramingComponent] No owning actor."));
+        return;
     }
 
-    if (!TargetActor)
+    // --- Find camera components by name (as you specified) ---
+    CameraRoot = Cast<USceneComponent>(
+        PlayerActor->GetDefaultSubobjectByName(TEXT("CameraRoot"))
+    );
+
+    SpringArm = Cast<USpringArmComponent>(
+        PlayerActor->GetDefaultSubobjectByName(TEXT("CameraBoom"))
+    );
+
+    if (!CameraRoot || !SpringArm)
     {
-        UE_LOG(LogTemp, Warning, TEXT("[CameraFramingComponent] No TargetActor assigned. The camera will only follow Player!"));
+        UE_LOG(
+            LogTemp,
+            Error,
+            TEXT("[CameraFramingComponent] CameraRoot or CameraBoom not found.")
+        );
+        return;
     }
 
-    // --- Find SpringArm in owner ---
-    SpringArm = Owner->FindComponentByClass<USpringArmComponent>();
+    // Disable any spring arm behavior that could fight us
+    SpringArm->bEnableCameraLag = false;
+    SpringArm->bEnableCameraRotationLag = false;
+    SpringArm->bInheritPitch = false;
+    SpringArm->bInheritYaw = false;
+    SpringArm->bInheritRoll = false;
 
-    if (!SpringArm)
-    {
-        UE_LOG(LogTemp, Error, TEXT("[CameraFramingComponent] No SpringArmComponent found on %s!"), *Owner->GetName());
-    }
+    // Cache defaults
+    InitialCameraRootLocation = CameraRoot->GetComponentLocation();
+    InitialArmLength = SpringArm->TargetArmLength;
+
+    bHasCachedDefaults = true;
+    bWasFramingTarget = false;
 }
 
 void UCameraFramingComponent::TickComponent(
@@ -45,32 +63,96 @@ void UCameraFramingComponent::TickComponent(
 {
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-    if (!PlayerActor || !TargetActor || !SpringArm)
+    if (!bHasCachedDefaults || !CameraRoot || !SpringArm || !PlayerActor)
         return;
 
-    FVector PlayerPos = PlayerActor->GetActorLocation();
-    FVector TargetPos = TargetActor->GetActorLocation();
+    if (!TargetActor)
+    {
+        if (bWasFramingTarget)
+        {
+            ReturnToDefaultCamera(DeltaTime);
+        }
 
-    // Midpoint between them
-    FVector Midpoint = (PlayerPos + TargetPos) * 0.5f;
+        bWasFramingTarget = false;
+        return;
+    }
 
-    // Desired rotation to look at midpoint
-    FRotator DesiredRot = UKismetMathLibrary::FindLookAtRotation(
-        SpringArm->GetComponentLocation(),
-        Midpoint
-    );
-
-    FRotator SmoothRot = FMath::RInterpTo(
-        SpringArm->GetComponentRotation(),
-        DesiredRot,
-        DeltaTime,
-        RotationSmoothSpeed
-    );
-
-    SpringArm->SetWorldRotation(SmoothRot);
-
-    // Distance → adjust arm length
-    float Distance = FVector::Distance(PlayerPos, TargetPos);
-    float DesiredArmLength = FMath::Clamp(Distance * ZoomMultiplier, MinZoom, MaxZoom);
-    SpringArm->TargetArmLength = DesiredArmLength;
+    bWasFramingTarget = true;
+    UpdateFramingCamera(DeltaTime);
 }
+
+void UCameraFramingComponent::UpdateFramingCamera(float DeltaTime)
+{
+    const FVector PlayerPos = PlayerActor->GetActorLocation();
+    const FVector TargetPos = TargetActor->GetActorLocation();
+
+    // --------------------------------------------------
+    // WORLD-SPACE CENTER (XYZ SAFE)
+    // --------------------------------------------------
+    FVector DesiredCenter = (PlayerPos + TargetPos) * 0.5f;
+
+    // Optional: give player more horizontal authority
+    DesiredCenter = FMath::Lerp(
+        PlayerPos,
+        DesiredCenter,
+        TargetHorizontalInfluence
+    );
+
+    // --------------------------------------------------
+    // MOVE CAMERA ROOT (POSITION ONLY)
+    // --------------------------------------------------
+    FVector CurrentCamLocation = CameraRoot->GetComponentLocation();
+
+    FVector DesiredCameraLocation(
+        DesiredCenter.X,
+        DesiredCenter.Y,
+        CurrentCamLocation.Z // keep authored height
+    );
+
+    FVector SmoothedLocation = FMath::VInterpTo(
+        CurrentCamLocation,
+        DesiredCameraLocation,
+        DeltaTime,
+        HorizontalSmoothSpeed
+    );
+
+    CameraRoot->SetWorldLocation(SmoothedLocation);
+
+    // --------------------------------------------------
+    // ZOOM (BASED ON DISTANCE)
+    // --------------------------------------------------
+    const float Distance = FVector::Distance(PlayerPos, TargetPos);
+
+    const float DesiredArmLength = FMath::Clamp(
+        Distance * ZoomMultiplier,
+        MinZoom,
+        MaxZoom
+    );
+
+    SpringArm->TargetArmLength = FMath::FInterpTo(
+        SpringArm->TargetArmLength,
+        DesiredArmLength,
+        DeltaTime,
+        ZoomSmoothSpeed
+    );
+}
+
+void UCameraFramingComponent::ReturnToDefaultCamera(float DeltaTime)
+{
+    FVector SmoothedLocation = FMath::VInterpTo(
+        CameraRoot->GetComponentLocation(),
+        InitialCameraRootLocation,
+        DeltaTime,
+        HorizontalSmoothSpeed
+    );
+
+    CameraRoot->SetWorldLocation(SmoothedLocation);
+
+    SpringArm->TargetArmLength = FMath::FInterpTo(
+        SpringArm->TargetArmLength,
+        InitialArmLength,
+        DeltaTime,
+        ZoomSmoothSpeed
+    );
+}
+
