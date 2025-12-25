@@ -96,15 +96,9 @@ void UCameraFramingComponent::UpdateFramingCamera(float DeltaTime)
     // --------------------------------------------------
     const FVector CurrentCamLocation = CameraRoot->GetComponentLocation();
 
-    const FVector DesiredCameraLocation(
-        DesiredCenter.X,
-        DesiredCenter.Y,
-        CurrentCamLocation.Z // keep authored height
-    );
-
     const FVector SmoothedLocation = FMath::VInterpTo(
         CurrentCamLocation,
-        DesiredCameraLocation,
+        DesiredCenter,
         DeltaTime,
         HorizontalSmoothSpeed
     );
