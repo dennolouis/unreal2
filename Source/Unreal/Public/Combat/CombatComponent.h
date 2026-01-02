@@ -126,4 +126,7 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void ClearBufferedInput() { bCanQueueNextAttack = true; bAttackInputBuffered = false; }
+
+	UFUNCTION(BlueprintCallable)
+	void AddPhaseTwoAttacks(const TArray<UAnimMontage*>& NewAttacks) { AttackAnimations.Append(NewAttacks); }
 };

@@ -65,6 +65,9 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FOnZeroHealthSignature OnZeroHealthDelegate;
 
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	bool bHasPhaseTwo{ false };
+
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
