@@ -40,6 +40,11 @@ void UCameraFramingComponent::BeginPlay()
         return;
     }
 
+    const FRotator FinalBoomRotation =
+        SpringArm->GetRelativeRotation() + CameraBoomRotationOffset;
+
+    SpringArm->SetRelativeRotation(FinalBoomRotation);
+
     // Disable spring arm behavior that could fight us
     SpringArm->bEnableCameraLag = false;
     SpringArm->bEnableCameraRotationLag = false;

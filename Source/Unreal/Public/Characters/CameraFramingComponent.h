@@ -35,6 +35,9 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera Framing")
     USpringArmComponent* SpringArm = nullptr;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+    FRotator CameraBoomRotationOffset = FRotator::ZeroRotator;
+
     // --- Zoom ---
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera Framing|Zoom")
     float ZoomMultiplier = 1.0f;
