@@ -85,7 +85,7 @@ void ABossCharacter::BeginPlay()
 	{
 		// Spawn weapon and attach to hand socket
 		SecondaryEquippedWeapon = GetWorld()->SpawnActor<AWeapon>(SecondaryWeaponClass);
-		if (PrimaryEquippedWeapon)
+		if (SecondaryEquippedWeapon)
 		{
 			SecondaryEquippedWeapon->AttachToComponent(GetMesh(),
 				FAttachmentTransformRules::SnapToTargetNotIncludingScale,
