@@ -109,7 +109,7 @@ public:
 
 	void StopAttackAnimation();
 
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable)
 	void RandomAttack();
 
 	UFUNCTION(BlueprintCallable)
