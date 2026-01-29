@@ -69,6 +69,12 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	class UStateTreeComponent* StateTreeComp;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bPlayerInRange{ false };
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float EnemyPatrolRange{ 200 };
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
