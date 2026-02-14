@@ -35,6 +35,9 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera Framing")
     USpringArmComponent* SpringArm = nullptr;
 
+    UPROPERTY(EditAnywhere, Category = "Camera Framing")
+    float ScreenPaddingFactor = 1.2f;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
     FRotator CameraBoomRotationOffset = FRotator::ZeroRotator;
 
@@ -57,6 +60,7 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera Framing|Smoothing")
     float ZoomSmoothSpeed = 5.0f;
+
 
     // --- Composition ---
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera Framing|Composition")

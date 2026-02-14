@@ -122,8 +122,10 @@ void UCameraFramingComponent::UpdateFramingCamera(float DeltaTime)
             TargetActor->GetActorLocation()
         );
 
+        const float PaddedDistance = Distance * ScreenPaddingFactor;
+
         DesiredArmLength = FMath::Clamp(
-            Distance * ZoomMultiplier,
+            PaddedDistance * ZoomMultiplier,
             MinZoom,
             MaxZoom
         );

@@ -117,6 +117,8 @@ void AMainCharacter::HandleDeath()
 {
 	PlayAnimMontage(DeathAnimMontage);
 	DisableInput(GetController<APlayerController>());
+
+	SetLifeSpan(2.0f);
 }
 
 void AMainCharacter::EndLockOnWithActor(AActor* ActorRef)
