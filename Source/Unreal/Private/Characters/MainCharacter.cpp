@@ -57,12 +57,16 @@ void AMainCharacter::BeginPlay()
 		PrimaryEquippedWeapon = GetWorld()->SpawnActor<AWeapon>(PrimaryWeaponClass);
 		if (PrimaryEquippedWeapon)
 		{
+			PrimaryEquippedWeapon->SetOwner(this);
 			PrimaryEquippedWeapon->AttachToComponent(GetMesh(),
 				FAttachmentTransformRules::SnapToTargetNotIncludingScale,
 				PrimaryWeaponSocket); // Change to your actual socket name
 
-			PrimaryEquippedWeapon->WeaponTraceComp->SetActorToIgnore(this);
-			PrimaryEquippedWeapon->WeaponTraceComp->SetWeaponStrength(WeaponStrength);
+			if (PrimaryEquippedWeapon->WeaponTraceComp)
+			{
+				PrimaryEquippedWeapon->WeaponTraceComp->SetActorToIgnore(this);
+				PrimaryEquippedWeapon->WeaponTraceComp->SetWeaponStrength(WeaponStrength);
+			}
 			PrimaryEquippedWeapon->SetCharacterRef(this);
 		}
 	}
@@ -71,17 +75,51 @@ void AMainCharacter::BeginPlay()
 	{
 		// Spawn weapon and attach to hand socket
 		SecondaryEquippedWeapon = GetWorld()->SpawnActor<AWeapon>(SecondaryWeaponClass);
-		if (PrimaryEquippedWeapon)
+		if (SecondaryEquippedWeapon)
 		{
+			SecondaryEquippedWeapon->SetOwner(this);
 			SecondaryEquippedWeapon->AttachToComponent(GetMesh(),
 				FAttachmentTransformRules::SnapToTargetNotIncludingScale,
 				SecondaryWeaponSocket); // Change to your actual socket name
 
-			SecondaryEquippedWeapon->WeaponTraceComp->SetActorToIgnore(this);
-			SecondaryEquippedWeapon->WeaponTraceComp->SetWeaponStrength(WeaponStrength);
+			if (SecondaryEquippedWeapon->WeaponTraceComp)
+			{
+				SecondaryEquippedWeapon->WeaponTraceComp->SetActorToIgnore(this);
+				SecondaryEquippedWeapon->WeaponTraceComp->SetWeaponStrength(WeaponStrength);
+			}
 			SecondaryEquippedWeapon->SetCharacterRef(this);
 		}
 	}
+
+}
+
+void AMainCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    // Destroy any spawned weapons so they don't persist after player respawn or level unload
+    if (IsValid(PrimaryEquippedWeapon))
+    {
+        PrimaryEquippedWeapon->Destroy();
+        PrimaryEquippedWeapon = nullptr;
+    }
+
+    if (IsValid(SecondaryEquippedWeapon))
+    {
+        SecondaryEquippedWeapon->Destroy();
+        SecondaryEquippedWeapon = nullptr;
+    }
+
+    // Deactivate aura effects
+    if (NiagaraEffectComponent && NiagaraEffectComponent->IsActive())
+    {
+        NiagaraEffectComponent->Deactivate();
+    }
+
+    if (NiagaraSpecialEffectComponent && NiagaraSpecialEffectComponent->IsActive())
+    {
+        NiagaraSpecialEffectComponent->Deactivate();
+    }
+
+    Super::EndPlay(EndPlayReason);
 }
 
 // Called every frame
@@ -155,9 +193,15 @@ void AMainCharacter::PlayHurtAnim(AActor* Attacker, TSubclassOf<class UCameraSha
 		SetActorRotation(FRotator(0.0f, LookAtRotation.Yaw, 0.0f));
 	}
 
-	int RandomIndex{
-		FMath::RandRange(0, HurtAnimMontages.Num() - 1)
-	};
+	// Ensure there is at least one hurt montage to play
+	int32 HurtCount = HurtAnimMontages.Num();
+	if (HurtCount == 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[%s] No HurtAnimMontages available to play."), *GetName());
+		return;
+	}
+
+	int RandomIndex{ FMath::RandRange(0, HurtCount - 1) };
 
 	if (CombatComp)
 	{
@@ -168,8 +212,14 @@ void AMainCharacter::PlayHurtAnim(AActor* Attacker, TSubclassOf<class UCameraSha
 
 	if (CameraShakeTemplate)
 	{
-		GetController<APlayerController>()
-			->ClientStartCameraShake(CameraShakeTemplate);
+		if (APlayerController* PC = GetController<APlayerController>())
+		{
+			PC->ClientStartCameraShake(CameraShakeTemplate);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[%s] Cannot play camera shake - no PlayerController."), *GetName());
+		}
 	}
 }
 

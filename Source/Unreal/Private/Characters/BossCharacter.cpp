@@ -42,21 +42,47 @@ void ABossCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	ControllerRef = GetController<AAIController>();
+    ControllerRef = GetController<AAIController>();
 
-	BlackboardComp = ControllerRef
-		->GetBlackboardComponent();
+    if (ControllerRef)
+    {
+        BlackboardComp = ControllerRef->GetBlackboardComponent();
+        if (BlackboardComp)
+        {
+            BlackboardComp->SetValueAsEnum(TEXT("CurrentState"), InitialState);
+        }
+        else
+        {
+            UE_LOG(LogTemp, Warning, TEXT("[%s] Controller has no BlackboardComponent."), *GetName());
+        }
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[%s] No AIController found."), *GetName());
+    }
 
-	BlackboardComp->SetValueAsEnum(
-		TEXT("CurrentState"),
-		InitialState
-	);
-	
-	GetWorld()->GetFirstPlayerController()
-		->GetPawn<AMainCharacter>()
-		->StatsComp
-		->OnZeroHealthDelegate.
-		AddDynamic(this, &ABossCharacter::HandlePlayerDeath);
+    // Safely bind to the player's OnZeroHealth delegate if possible
+    APlayerController* PC = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr;
+    if (!PC)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[%s] No PlayerController found."), *GetName());
+    }
+    else
+    {
+        AMainCharacter* MainChar = PC->GetPawn<AMainCharacter>();
+        if (!MainChar)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("[%s] No MainCharacter found."), *GetName());
+        }
+        else if (MainChar->StatsComp)
+        {
+            MainChar->StatsComp->OnZeroHealthDelegate.AddDynamic(this, &ABossCharacter::HandlePlayerDeath);
+        }
+        else
+        {
+            UE_LOG(LogTemp, Warning, TEXT("[%s] MainCharacter has no StatsComp."), *GetName());
+        }
+    }
 
 	float WeaponStrength{ 10.0f };
 
@@ -71,12 +97,16 @@ void ABossCharacter::BeginPlay()
 		PrimaryEquippedWeapon = GetWorld()->SpawnActor<AWeapon>(PrimaryWeaponClass);
 		if (PrimaryEquippedWeapon)
 		{
+			PrimaryEquippedWeapon->SetOwner(this);
 			PrimaryEquippedWeapon->AttachToComponent(GetMesh(),
 				FAttachmentTransformRules::SnapToTargetNotIncludingScale,
 				PrimaryWeaponSocket); // Change to your actual socket name
 
-			PrimaryEquippedWeapon->WeaponTraceComp->SetActorToIgnore(this);
-			PrimaryEquippedWeapon->WeaponTraceComp->SetWeaponStrength(WeaponStrength);
+			if (PrimaryEquippedWeapon->WeaponTraceComp)
+			{
+				PrimaryEquippedWeapon->WeaponTraceComp->SetActorToIgnore(this);
+				PrimaryEquippedWeapon->WeaponTraceComp->SetWeaponStrength(WeaponStrength);
+			}
 			PrimaryEquippedWeapon->SetCharacterRef(this);
 		}
 	}
@@ -87,15 +117,72 @@ void ABossCharacter::BeginPlay()
 		SecondaryEquippedWeapon = GetWorld()->SpawnActor<AWeapon>(SecondaryWeaponClass);
 		if (SecondaryEquippedWeapon)
 		{
+			SecondaryEquippedWeapon->SetOwner(this);
 			SecondaryEquippedWeapon->AttachToComponent(GetMesh(),
 				FAttachmentTransformRules::SnapToTargetNotIncludingScale,
 				SecondaryWeaponSocket); // Change to your actual socket name
 
-			SecondaryEquippedWeapon->WeaponTraceComp->SetActorToIgnore(this);
-			SecondaryEquippedWeapon->WeaponTraceComp->SetWeaponStrength(WeaponStrength);
+			if (SecondaryEquippedWeapon->WeaponTraceComp)
+			{
+				SecondaryEquippedWeapon->WeaponTraceComp->SetActorToIgnore(this);
+				SecondaryEquippedWeapon->WeaponTraceComp->SetWeaponStrength(WeaponStrength);
+			}
 			SecondaryEquippedWeapon->SetCharacterRef(this);
 		}
 	}
+}
+
+void ABossCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    // Stop AI logic and unpossess controller to ensure no behavior tree callbacks run after pawn is gone
+    if (ControllerRef)
+    {
+        if (UBrainComponent* Brain = ControllerRef->GetBrainComponent())
+        {
+            Brain->StopLogic(TEXT("EndPlay"));
+        }
+
+        ControllerRef->UnPossess();
+    }
+
+    // Destroy any spawned weapons so they don't persist after level streaming unload
+    if (IsValid(PrimaryEquippedWeapon))
+    {
+        PrimaryEquippedWeapon->Destroy();
+        PrimaryEquippedWeapon = nullptr;
+    }
+
+    if (IsValid(SecondaryEquippedWeapon))
+    {
+        SecondaryEquippedWeapon->Destroy();
+        SecondaryEquippedWeapon = nullptr;
+    }
+
+    // Stop any active gather FX
+    if (GatherEffectComponent && GatherEffectComponent->IsActive())
+    {
+        GatherEffectComponent->Deactivate();
+    }
+
+    // Remove any dynamic delegate binding to the player to avoid callbacks into this object after it's destroyed
+    if (GetWorld())
+    {
+        APlayerController* PC = GetWorld()->GetFirstPlayerController();
+        if (PC)
+        {
+            AMainCharacter* MainChar = PC->GetPawn<AMainCharacter>();
+            if (MainChar && MainChar->StatsComp)
+            {
+                MainChar->StatsComp->OnZeroHealthDelegate.RemoveDynamic(this, &ABossCharacter::HandlePlayerDeath);
+            }
+        }
+    }
+
+    // Clear blackboard reference to be safe
+    BlackboardComp = nullptr;
+    ControllerRef = nullptr;
+
+    Super::EndPlay(EndPlayReason);
 }
 
 // Called every frame
@@ -114,16 +201,17 @@ void ABossCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 
 void ABossCharacter::DetectPawn(APawn* DetectedPawn, APawn* PawnToDetect)
 {
-	EEnemyState CurrentState{
-		static_cast<EEnemyState>(BlackboardComp->GetValueAsEnum(TEXT("CurrentState")))
-	};
+    if (!BlackboardComp)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[%s] DetectPawn called but BlackboardComp is null."), *GetName());
+        return;
+    }
 
-	if (DetectedPawn != PawnToDetect || CurrentState != EEnemyState::Idle) { return; }
+    EEnemyState CurrentState{ static_cast<EEnemyState>(BlackboardComp->GetValueAsEnum(TEXT("CurrentState"))) };
 
-	BlackboardComp->SetValueAsEnum(
-		TEXT("CurrentState"),
-		EEnemyState::Range
-	);
+    if (DetectedPawn != PawnToDetect || CurrentState != EEnemyState::Idle) { return; }
+
+    BlackboardComp->SetValueAsEnum(TEXT("CurrentState"), EEnemyState::Range);
 }
 
 float ABossCharacter::GetDamage()
@@ -148,18 +236,28 @@ float ABossCharacter::GetMeleeRange()
 
 void ABossCharacter::HandlePlayerDeath()
 {
-	ControllerRef->GetBlackboardComponent()
-		->SetValueAsEnum(
-			TEXT("CurrentState"), EEnemyState::GameOver
-		);
+    if (ControllerRef && ControllerRef->GetBlackboardComponent())
+    {
+        ControllerRef->GetBlackboardComponent()->SetValueAsEnum(TEXT("CurrentState"), EEnemyState::GameOver);
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[%s] HandlePlayerDeath called but ControllerRef or Blackboard is null."), *GetName());
+    }
 }
 
 void ABossCharacter::HandleDeath()
 {
 	float Duration{ PlayAnimMontage(DeathAnim) };
-	
-	ControllerRef->GetBrainComponent()
-		->StopLogic("defeated");
+    
+    if (ControllerRef && ControllerRef->GetBrainComponent())
+    {
+        ControllerRef->GetBrainComponent()->StopLogic("defeated");
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[%s] HandleDeath called but ControllerRef or BrainComponent is null."), *GetName());
+    }
 
 	FindComponentByClass<UCapsuleComponent>()
 		->SetCollisionEnabled(ECollisionEnabled::NoCollision);
