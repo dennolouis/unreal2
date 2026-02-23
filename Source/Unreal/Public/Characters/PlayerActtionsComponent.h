@@ -79,6 +79,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Roll")
 	UParticleSystem* ChainRollEffect;
 
+public:
+    // Accessors for VFX/SFX so other components can use the same assets without reaching into private members
+    USoundBase* GetTeleportSound() const { return TeleportSound; }
+    UParticleSystem* GetChainRollEffect() const { return ChainRollEffect; }
+
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;

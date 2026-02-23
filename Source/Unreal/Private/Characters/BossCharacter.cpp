@@ -171,9 +171,15 @@ void ABossCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
         if (PC)
         {
             AMainCharacter* MainChar = PC->GetPawn<AMainCharacter>();
-            if (MainChar && MainChar->StatsComp)
+            if (MainChar)
             {
-                MainChar->StatsComp->OnZeroHealthDelegate.RemoveDynamic(this, &ABossCharacter::HandlePlayerDeath);
+                if (MainChar->StatsComp)
+                {
+                    MainChar->StatsComp->OnZeroHealthDelegate.RemoveDynamic(this, &ABossCharacter::HandlePlayerDeath);
+                }
+
+                // Ensure the player is no longer locked on to this boss when it is unloaded
+                MainChar->EndLockOnWithActor(this);
             }
         }
     }

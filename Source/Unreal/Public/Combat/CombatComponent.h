@@ -118,6 +118,10 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void PlaySpecialAttack();
 
+	// Plays a teleporting special attack: optional prep montage, teleport above locked target and play the special attack montage
+	UFUNCTION(BlueprintCallable)
+	void PlayTeleportSpecialAttack();
+
 	UFUNCTION(BlueprintCallable)
 	void SetIsMoving(bool value) { bIsMoving = value; }
 
@@ -126,6 +130,20 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void ClearBufferedInput() { bCanQueueNextAttack = true; bAttackInputBuffered = false; }
+
+protected:
+    // Teleport special configuration
+    UPROPERTY(EditAnywhere, Category = "Special|Teleport")
+    UAnimMontage* TeleportPrepMontage;
+
+    UPROPERTY(EditAnywhere, Category = "Special|Teleport")
+    float TeleportHeight{ 400.0f };
+
+    UPROPERTY(EditAnywhere, Category = "Special|Teleport")
+    float TeleportForwardOffset{ 0.0f };
+
+    // internal timer handle used to schedule the teleport
+    FTimerHandle TeleportSpecialTimerHandle;
 
 	UFUNCTION(BlueprintCallable)
 	void AddPhaseTwoAttacks(const TArray<UAnimMontage*>& NewAttacks) { AttackAnimations.Append(NewAttacks); }
