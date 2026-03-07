@@ -126,6 +126,9 @@ public:
 	void PlayTeleportSpecialAttack();
 
 	UFUNCTION(BlueprintCallable)
+	void TryTeleportSpecialAttack();
+
+	UFUNCTION(BlueprintCallable)
 	void SetIsMoving(bool value) { bIsMoving = value; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
@@ -147,6 +150,15 @@ protected:
 
     // internal timer handle used to schedule the teleport
     FTimerHandle TeleportSpecialTimerHandle;
+
+    // Pending teleport state used when prep montage is playing. The AnimNotify should call ExecuteTeleportSpecialAttack()
+    TWeakObjectPtr<AActor> PendingTeleportTarget;
+    bool bTeleportPending{ false };
+
+public:
+    // Called (from an AnimNotify or blueprint) to actually perform the teleport when prep animation reaches the correct frame
+    UFUNCTION(BlueprintCallable)
+    void ExecuteTeleportSpecialAttack();
 
 	UFUNCTION(BlueprintCallable)
 	void AddPhaseTwoAttacks(const TArray<UAnimMontage*>& NewAttacks) { AttackAnimations.Append(NewAttacks); }

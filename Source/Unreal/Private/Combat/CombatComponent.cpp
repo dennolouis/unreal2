@@ -152,6 +152,23 @@ void UCombatComponent::TryPlaySpecialAttack()
 	}
 }
 
+void UCombatComponent::TryTeleportSpecialAttack()
+{
+    if (!bCanQueueNextAttack) return;
+
+    if (CharacterRef->Implements<UMainplayer>())
+    {
+        IMainplayer* IPlayerRef{ Cast<IMainplayer>(CharacterRef) };
+
+        if (IPlayerRef && !IPlayerRef->SpecialGageFull())
+        {
+            return;
+        }
+    }
+
+    PlayTeleportSpecialAttack();
+}
+
 void UCombatComponent::PlaySpecialAttack()
 {
 	if (CharacterRef->Implements<UMainplayer>())
@@ -196,96 +213,19 @@ void UCombatComponent::PlayTeleportSpecialAttack()
         return;
     }
 
-    bCanQueueNextAttack = false;
+    // Set pending state instead of scheduling a timer so an AnimNotify can trigger the teleport at the correct frame
+    PendingTeleportTarget = Target;
+    bTeleportPending = true;
 
-    // Play optional prep montage then teleport when the notify/time elapses
-    float PrepTime = 0.0f;
+    // Play the prep montage; the AnimNotify should call ExecuteTeleportSpecialAttack() when ready
     if (TeleportPrepMontage && CharacterRef)
     {
-        PrepTime = CharacterRef->PlayAnimMontage(TeleportPrepMontage);
+        CharacterRef->PlayAnimMontage(TeleportPrepMontage);
     }
-
-    // Fallback small delay if no montage
-    if (PrepTime <= 0.0f) PrepTime = 0.2f;
-
-    // Schedule the teleport to occur after PrepTime seconds
-    if (GetWorld())
+    else
     {
-        FTimerDelegate TeleportDelegate = FTimerDelegate::CreateLambda([this, Target]() {
-            if (!IsValid(CharacterRef) || !IsValid(Target))
-            {
-                bCanQueueNextAttack = true;
-                return;
-            }
-
-            FVector TargetLoc = Target->GetActorLocation();
-            FVector Above = TargetLoc + FVector(0, 0, TeleportHeight);
-
-            // optionally offset forward relative to target forward vector
-            FVector Forward = Target->GetActorForwardVector();
-            FVector TeleLoc = Above + Forward * TeleportForwardOffset;
-
-            // simple overlap check: sphere
-            FHitResult HitResult;
-            FCollisionQueryParams Params(TEXT("TeleportSweep"), false, CharacterRef);
-            bool bBlocked = GetWorld()->SweepSingleByChannel(HitResult, TeleLoc, TeleLoc, FQuat::Identity,
-                ECC_Pawn, FCollisionShape::MakeSphere(34.0f), Params);
-
-            if (bBlocked)
-            {
-                // try raising higher
-                TeleLoc.Z += 200.0f;
-            }
-
-            // Teleport the character but adjust pitch so the player looks up/down at the target
-            FRotator CurrentRot = CharacterRef->GetActorRotation();
-            FRotator LookAtRot = UKismetMathLibrary::FindLookAtRotation(TeleLoc, TargetLoc);
-            // Keep yaw and roll, use pitch from the look-at rotation so the character looks toward the target vertically
-            FRotator TeleRot = FRotator(LookAtRot.Pitch, CurrentRot.Yaw, CurrentRot.Roll);
-            CharacterRef->TeleportTo(TeleLoc, TeleRot);
-
-            // Play landing effects from the player's actions component if available
-            UPlayerActtionsComponent* ActionsComp = CharacterRef->FindComponentByClass<UPlayerActtionsComponent>();
-            if (ActionsComp)
-            {
-                if (UParticleSystem* FX = ActionsComp->GetChainRollEffect())
-                {
-                    UGameplayStatics::SpawnEmitterAtLocation(
-                        GetWorld(),
-                        FX,
-                        TeleLoc,
-                        CharacterRef->GetActorRotation(),
-                        FVector(1.0f),
-                        true
-                    );
-                }
-
-                if (USoundBase* Snd = ActionsComp->GetTeleportSound())
-                {
-                    UGameplayStatics::PlaySoundAtLocation(GetWorld(), Snd, TeleLoc);
-                }
-            }
-
-            // Play the special attack montage after teleport
-            if (IsValid(CharacterRef) && SpecialAttack)
-            {
-                CharacterRef->PlayAnimMontage(SpecialAttack);
-            }
-
-            OnSpecialAttackDelegate.Broadcast();
-
-            // allow next attack after montage length or small delay
-            float Recovery = SpecialAttack ? SpecialAttack->GetPlayLength() : 0.5f;
-            if (Recovery <= 0.0f) Recovery = 0.5f;
-            if (GetWorld())
-            {
-                GetWorld()->GetTimerManager().SetTimer(TeleportSpecialTimerHandle, [this]() {
-                    bCanQueueNextAttack = true;
-                }, Recovery, false);
-            }
-        });
-
-        GetWorld()->GetTimerManager().SetTimer(TeleportSpecialTimerHandle, TeleportDelegate, PrepTime, false);
+        // if no prep montage, just execute immediately
+        ExecuteTeleportSpecialAttack();
     }
 }
 
@@ -293,6 +233,91 @@ void UCombatComponent::ResetComboCounter()
 {
 	ComboCounter = 0;
 	HeavyComboCounter = 0;
+}
+
+void UCombatComponent::ExecuteTeleportSpecialAttack()
+{
+    if (!bTeleportPending || !PendingTeleportTarget.IsValid() || !IsValid(CharacterRef))
+    {
+        bTeleportPending = false;
+        PendingTeleportTarget = nullptr;
+        return;
+    }
+
+    AActor* Target = PendingTeleportTarget.Get();
+    // clear pending flag immediately to avoid re-entry
+    bTeleportPending = false;
+    PendingTeleportTarget = nullptr;
+
+    // Re-run server-side checks similar to PlayTeleportSpecialAttack
+    if (!IsValid(Target)) return;
+
+    bCanQueueNextAttack = false;
+
+    FVector TargetLoc = Target->GetActorLocation();
+    FVector Above = TargetLoc + FVector(0, 0, TeleportHeight);
+
+    FVector DirToPlayer = CharacterRef->GetActorLocation() - TargetLoc;
+    DirToPlayer.Z = 0.0f;
+    FVector Forward = DirToPlayer.GetSafeNormal();
+    if (Forward.IsNearlyZero())
+    {
+        Forward = Target->GetActorForwardVector();
+        Forward.Z = 0.0f;
+        Forward = Forward.GetSafeNormal();
+    }
+
+    FVector TeleLoc = Above + Forward * TeleportForwardOffset;
+
+    FHitResult HitResult;
+    FCollisionQueryParams Params(TEXT("TeleportSweep"), false, CharacterRef);
+    bool bBlocked = GetWorld()->SweepSingleByChannel(HitResult, TeleLoc, TeleLoc, FQuat::Identity,
+        ECC_Pawn, FCollisionShape::MakeSphere(34.0f), Params);
+
+    if (bBlocked)
+    {
+        TeleLoc.Z += 200.0f;
+    }
+
+    CharacterRef->TeleportTo(TeleLoc, CharacterRef->GetActorRotation());
+
+    UPlayerActtionsComponent* ActionsComp = CharacterRef->FindComponentByClass<UPlayerActtionsComponent>();
+    if (ActionsComp)
+    {
+        if (UParticleSystem* FX = ActionsComp->GetChainRollEffect())
+        {
+            UGameplayStatics::SpawnEmitterAtLocation(
+                GetWorld(),
+                FX,
+                TeleLoc,
+                CharacterRef->GetActorRotation(),
+                FVector(1.0f),
+                true
+            );
+        }
+
+        if (USoundBase* Snd = ActionsComp->GetTeleportSound())
+        {
+            UGameplayStatics::PlaySoundAtLocation(GetWorld(), Snd, TeleLoc);
+        }
+    }
+
+    UAnimMontage* ChosenMontage = TeleportSpecialAttack ? TeleportSpecialAttack : SpecialAttack;
+    if (IsValid(CharacterRef) && ChosenMontage)
+    {
+        CharacterRef->PlayAnimMontage(ChosenMontage);
+    }
+
+    OnSpecialAttackDelegate.Broadcast();
+
+    float Recovery = ChosenMontage ? ChosenMontage->GetPlayLength() : 0.5f;
+    if (Recovery <= 0.0f) Recovery = 0.5f;
+    if (GetWorld())
+    {
+        GetWorld()->GetTimerManager().SetTimer(TeleportSpecialTimerHandle, [this]() {
+            bCanQueueNextAttack = true;
+        }, Recovery, false);
+    }
 }
 
 bool UCombatComponent::IsAttacking() const
