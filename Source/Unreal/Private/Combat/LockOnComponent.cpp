@@ -31,6 +31,16 @@ void ULockOnComponent::BeginPlay()
 	
 }
 
+void ULockOnComponent::PauseCameraControl()
+{
+    bCameraControlEnabled = false;
+}
+
+void ULockOnComponent::ResumeCameraControl()
+{
+    bCameraControlEnabled = true;
+}
+
 void ULockOnComponent::StartLockOn(float Radius)
 {
 	FHitResult OutResult;
@@ -138,14 +148,14 @@ void ULockOnComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 		return;
 	}
 
-	if (!bIsSideScroller)
-	{
-		TargetLocation.Z -= 125; //adjusting so the camera looks more downward
+    if (!bIsSideScroller && bCameraControlEnabled)
+    {
+        TargetLocation.Z -= 125; //adjusting so the camera looks more downward
 
-		FRotator NewRotation{ UKismetMathLibrary::FindLookAtRotation(
-			CurrentLocation, TargetLocation
-		) };
-		Controller->SetControlRotation(NewRotation);
-	}
+        FRotator NewRotation{ UKismetMathLibrary::FindLookAtRotation(
+            CurrentLocation, TargetLocation
+        ) };
+        Controller->SetControlRotation(NewRotation);
+    }
 }
 

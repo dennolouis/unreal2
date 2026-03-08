@@ -220,6 +220,12 @@ void UCombatComponent::PlayTeleportSpecialAttack()
     // Play the prep montage; the AnimNotify should call ExecuteTeleportSpecialAttack() when ready
     if (TeleportPrepMontage && CharacterRef)
     {
+        // Pause lock-on camera control while the prep montage and teleport sequence are running
+        if (ULockOnComponent* LocComp = CharacterRef->FindComponentByClass<ULockOnComponent>())
+        {
+            LocComp->PauseCameraControl();
+        }
+
         CharacterRef->PlayAnimMontage(TeleportPrepMontage);
     }
     else
@@ -316,6 +322,14 @@ void UCombatComponent::ExecuteTeleportSpecialAttack()
     {
         GetWorld()->GetTimerManager().SetTimer(TeleportSpecialTimerHandle, [this]() {
             bCanQueueNextAttack = true;
+            // Resume lock-on camera control when the teleport special attack completes
+            if (CharacterRef)
+            {
+                if (ULockOnComponent* LocComp = CharacterRef->FindComponentByClass<ULockOnComponent>())
+                {
+                    LocComp->ResumeCameraControl();
+                }
+            }
         }, Recovery, false);
     }
 }

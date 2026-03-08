@@ -35,6 +35,17 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FOnUpdatedTargetSignature OnUpdatedTargetDelegate;
 
+    // Temporarily pause/resume control of the camera by this component.
+    UFUNCTION(BlueprintCallable)
+    void PauseCameraControl();
+
+    UFUNCTION(BlueprintCallable)
+    void ResumeCameraControl();
+
+    // Whether the lock-on component is allowed to update the controller rotation
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+    bool bCameraControlEnabled{ true };
+
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
