@@ -45,6 +45,7 @@ protected:
     float Duration{0.0f};
     bool bInitialized{false};
     TWeakObjectPtr<USpringArmComponent> SpringArm;
+    bool PrevUsePawnControlRotation{false};
 
 public:
     virtual void NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float TotalDuration) override;

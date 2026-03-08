@@ -29,6 +29,10 @@ void UTeleportCameraAnimNotifyState::NotifyBegin(USkeletalMeshComponent* MeshCom
     // compute rotation target for the spring arm (relative rotation)
     InitialRelativeRotation = SpringArm->GetRelativeRotation();
     TargetRelativeRotation = InitialRelativeRotation + FRotator(0.0f, RotationYawDegrees, 0.0f);
+    // If the spring arm is set to use the pawn control rotation it will override our relative rotation.
+    // Cache and disable it so our rotation changes are visible.
+    PrevUsePawnControlRotation = SpringArm->bUsePawnControlRotation;
+    SpringArm->bUsePawnControlRotation = false;
 }
 
 void UTeleportCameraAnimNotifyState::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float FrameDeltaTime)
@@ -77,6 +81,8 @@ void UTeleportCameraAnimNotifyState::NotifyEnd(USkeletalMeshComponent* MeshComp,
     SpringArm->TargetOffset = InitialTargetOffset;
     SpringArm->TargetArmLength = InitialArmLength;
     SpringArm->SetRelativeRotation(InitialRelativeRotation);
+    // restore bUsePawnControlRotation
+    SpringArm->bUsePawnControlRotation = PrevUsePawnControlRotation;
 
     bInitialized = false;
     SpringArm = nullptr;
