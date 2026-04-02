@@ -213,11 +213,40 @@ void ABossCharacter::DetectPawn(APawn* DetectedPawn, APawn* PawnToDetect)
         return;
     }
 
+    // Only proceed if the detected pawn is the pawn we're supposed to detect
+    if (DetectedPawn != PawnToDetect) { return; }
+
+    // Determine current state to avoid interrupting active attacks
     EEnemyState CurrentState{ static_cast<EEnemyState>(BlackboardComp->GetValueAsEnum(TEXT("CurrentState"))) };
 
-    if (DetectedPawn != PawnToDetect || CurrentState != EEnemyState::Idle) { return; }
+    // If the detected pawn is the player, check their health. If they're alive, and
+    // the boss is currently idle or in GameOver (respawn scenario), transition to Range.
+    if (AMainCharacter* MainChar = Cast<AMainCharacter>(DetectedPawn))
+    {
+        if (MainChar->StatsComp && MainChar->StatsComp->Stats.Contains(EStat::Health))
+        {
+            float Health = MainChar->StatsComp->Stats[EStat::Health];
+            if (Health > 0.0f)
+            {
+                if (CurrentState == EEnemyState::Idle || CurrentState == EEnemyState::GameOver)
+                {
+                    BlackboardComp->SetValueAsEnum(TEXT("CurrentState"), EEnemyState::Range);
+                }
+                return;
+            }
+            else
+            {
+                // Player is dead; leave state handling to HandlePlayerDeath
+                return;
+            }
+        }
+    }
 
-    BlackboardComp->SetValueAsEnum(TEXT("CurrentState"), EEnemyState::Range);
+    // Fallback: only change to Range if boss is idle or recovering from GameOver.
+    if (CurrentState == EEnemyState::Idle || CurrentState == EEnemyState::GameOver)
+    {
+        BlackboardComp->SetValueAsEnum(TEXT("CurrentState"), EEnemyState::Range);
+    }
 }
 
 float ABossCharacter::GetDamage()

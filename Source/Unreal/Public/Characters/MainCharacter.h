@@ -93,6 +93,10 @@ protected:
 	UPROPERTY(BlueprintReadOnly)
 	class UPlayerAnimInstance* PlayerAnim;
 
+    // Flag set when the character has died to prevent playing other anims
+    UPROPERTY(BlueprintReadOnly)
+    bool bIsDead{ false };
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;

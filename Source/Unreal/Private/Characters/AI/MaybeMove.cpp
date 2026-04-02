@@ -8,10 +8,11 @@
 
 EBTNodeResult::Type UMaybeMove::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
 {
-    ACharacter* CharacterRef{
-        OwnerComp.GetAIOwner()->GetPawn<ACharacter>()
-    };
+    // Check AI owner
+    AAIController* AIOwner = OwnerComp.GetAIOwner();
+    if (!IsValid(AIOwner)) { return EBTNodeResult::Failed; }
 
+    ACharacter* CharacterRef = AIOwner->GetPawn<ACharacter>();
     if (!IsValid(CharacterRef)) { return EBTNodeResult::Failed; }
 
     double RandomValue{ UKismetMathLibrary::RandomFloat() };
@@ -35,10 +36,18 @@ EBTNodeResult::Type UMaybeMove::ExecuteTask(UBehaviorTreeComponent& OwnerComp, u
         }
 
         // Cache the timer to finish task later
-        FTimerDelegate TimerCallback;
-        TimerCallback.BindUFunction(this, FName("FinishTask"), &OwnerComp);
+        UWorld* World = CharacterRef->GetWorld();
+        if (!IsValid(World))
+        {
+            return EBTNodeResult::Failed;
+        }
 
-        CharacterRef->GetWorldTimerManager().SetTimer(
+        FTimerDelegate TimerCallback;
+        // OwnerComp is a reference; take its pointer to pass to the delegate
+        UBehaviorTreeComponent* OwnerCompPtr = &OwnerComp;
+        TimerCallback.BindUFunction(this, FName("FinishTask"), OwnerCompPtr);
+
+        World->GetTimerManager().SetTimer(
             FinishTimerHandle,
             TimerCallback,
             AnimDuration,

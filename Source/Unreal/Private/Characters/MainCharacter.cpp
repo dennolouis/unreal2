@@ -153,10 +153,18 @@ bool AMainCharacter::SpecialGageFull()
 
 void AMainCharacter::HandleDeath()
 {
-	PlayAnimMontage(DeathAnimMontage);
-	DisableInput(GetController<APlayerController>());
+    if (bIsDead) return;
 
-	SetLifeSpan(2.0f);
+    // Mark as dead to prevent other animations (like hurt) from interrupting
+    bIsDead = true;
+
+    // Stop any currently playing montage so death anim can play cleanly
+    StopAnimMontage();
+
+    PlayAnimMontage(DeathAnimMontage);
+    DisableInput(GetController<APlayerController>());
+
+    SetLifeSpan(2.0f);
 }
 
 void AMainCharacter::EndLockOnWithActor(AActor* ActorRef)
@@ -180,6 +188,9 @@ bool AMainCharacter::CanTakeDamage(AActor* Opponent)
 
 void AMainCharacter::PlayHurtAnim(AActor* Attacker, TSubclassOf<class UCameraShakeBase> CameraShakeTemplate)
 {
+    // Do not play hurt animations if already dead
+    if (bIsDead) return;
+
 	if (Attacker)
 	{
 		// Get attacker and player positions
