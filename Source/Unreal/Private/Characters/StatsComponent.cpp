@@ -156,3 +156,12 @@ float UStatsComponent::GetStatPercentage(EStat Current, EStat Max)
 	return Stats[Current] / Stats[Max];
 }
 
+float UStatsComponent::GetStat(EStat Stat)
+{
+	// FindRef returns the value if it exists, or the type's default (0.0f) if it doesn't
+	const float FoundStat = Stats.FindRef(Stat);
+
+	// Fallback to 150 if the stat was never set/initialized in the map
+	return (FoundStat != 0.0f) ? FoundStat : 150.0f;
+}
+

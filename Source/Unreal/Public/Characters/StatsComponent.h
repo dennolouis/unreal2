@@ -99,4 +99,7 @@ public:
 
 	UFUNCTION(BlueprintPure)
 	float GetStatPercentage(EStat Current, EStat Max);
+
+	UFUNCTION(BlueprintPure)
+	float GetStat(EStat Stat);
 };
