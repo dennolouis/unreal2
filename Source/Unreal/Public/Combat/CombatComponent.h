@@ -82,6 +82,9 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	bool bIsModifierDown{ false };
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio", meta = (AllowPrivateAccess = "true"))
+	class USoundCue* CombatSoundCue;
+
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
@@ -136,6 +139,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void ClearBufferedInput() { bCanQueueNextAttack = true; bAttackInputBuffered = false; }
+
+	UFUNCTION(BlueprintCallable, Category = "Audio")
+	void PlayCombatSound();
 
 protected:
     // Teleport special configuration

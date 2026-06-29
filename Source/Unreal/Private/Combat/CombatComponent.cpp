@@ -9,6 +9,7 @@
 #include "TimerManager.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/GameplayStatics.h"
+#include "Sound/SoundCue.h"
 #include "Characters/PlayerActtionsComponent.h"
 
 // Sets default values for this component's properties
@@ -137,11 +138,20 @@ void UCombatComponent::HandleResetAttack()
 
 void UCombatComponent::RandomAttack()
 {
-	int RandomIndex{
-		FMath::RandRange(0, AttackAnimations.Num() - 1)
-	};
+	// 1. Ensure the array has elements to avoid division by zero or negative indexing
+	if (AttackAnimations.IsEmpty() || !CharacterRef)
+	{
+		return;
+	}
 
-	AnimDuration = CharacterRef->PlayAnimMontage(AttackAnimations[RandomIndex]);
+	// 2. Generate a safe random index
+	int32 RandomIndex = FMath::RandRange(0, AttackAnimations.Num() - 1);
+
+	// 3. Optional safeguard: Check if the element itself is not null
+	if (AttackAnimations[RandomIndex])
+	{
+		AnimDuration = CharacterRef->PlayAnimMontage(AttackAnimations[RandomIndex]);
+	}
 }
 
 void UCombatComponent::TryPlaySpecialAttack()
@@ -169,11 +179,18 @@ void UCombatComponent::TryTeleportSpecialAttack()
     PlayTeleportSpecialAttack();
 }
 
+void UCombatComponent::PlayCombatSound()
+{
+    if (CombatSoundCue) {
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(), CombatSoundCue, CharacterRef->GetActorLocation());
+    }
+}
+
 void UCombatComponent::PlaySpecialAttack()
 {
 	if (CharacterRef->Implements<UMainplayer>())
 	{
-		IMainplayer* IPlayerRef{ Cast<IMainplayer>(CharacterRef) };
+		IMainplayer* IPlayerRef{ Cast<IMainplayer>(CharacterRef) };          
 
 		// Check if the player has enough stamina for a heavy attack
 		if (IPlayerRef && !IPlayerRef->SpecialGageFull())
