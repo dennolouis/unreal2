@@ -43,6 +43,8 @@ class UNREAL_API UCombatComponent : public UActorComponent
 
 	ACharacter* CharacterRef;
 
+	class ULockOnComponent* LockOnComponentRef;
+
 	UPROPERTY(VisibleAnywhere)
 	int ComboCounter{ 0 };
 
@@ -70,6 +72,20 @@ class UNREAL_API UCombatComponent : public UActorComponent
 public:	
 	// Sets default values for this component's properties
 	UCombatComponent();
+
+	FVector LastInputDirection{ FVector::ZeroVector };
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Rotation")
+	bool bUseSmoothedRotation{ true };
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Rotation", meta = (ClampMin = "0.1", ClampMax = "10.0", EditCondition = "bUseSmoothedRotation"))
+	float RotationInterpSpeed{ 10.0f };
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Combat")
+	bool IsFinisherAttack() const;
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Combat")
+	bool IsLockedOn() const;
 
 	UPROPERTY(BlueprintAssignable)
 	FOnAttackPerformedSignature OnAttackPerformedDelegate;
@@ -142,6 +158,15 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Audio")
 	void PlayCombatSound();
+
+	UFUNCTION(BlueprintCallable)
+	void SetInputDirection(FVector InputDirection) { LastInputDirection = InputDirection; }
+
+	UFUNCTION(BlueprintCallable)
+	void SetCameraRelativeInputDirection(FVector InputDirection);
+
+	UFUNCTION(BlueprintCallable)
+	void ApplySmoothRotationTowardsInput(float DeltaTime);
 
 protected:
     // Teleport special configuration

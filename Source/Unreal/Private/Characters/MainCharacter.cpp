@@ -16,6 +16,7 @@
 #include "NiagaraComponent.h"
 #include "NiagaraSystem.h"
 #include "NiagaraFunctionLibrary.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 
 // Sets default values
@@ -126,7 +127,6 @@ void AMainCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void AMainCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
 }
 
 // Called to bind functionality to input

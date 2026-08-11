@@ -75,6 +75,14 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     float AngleThreshold{ 45.0f };
 
+    // Maximum pitch angle (how far up the camera can look during lock-on)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    float MaxLockOnPitch{ 30.0f };
+
+    // Minimum pitch angle (how far down the camera can look during lock-on)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    float MinLockOnPitch{ -60.0f };
+
 private:
     // Array of nearby valid targets
     TArray<AActor*> NearbyTargets;

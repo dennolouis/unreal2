@@ -29,16 +29,105 @@ void UCombatComponent::BeginPlay()
 	Super::BeginPlay();
 
 	CharacterRef = GetOwner<ACharacter>();
-	
+
+	// Cache the LockOnComponent reference to avoid expensive FindComponentByClass every frame
+	if (CharacterRef)
+	{
+		LockOnComponentRef = CharacterRef->FindComponentByClass<ULockOnComponent>();
+	}
 }
 
+void UCombatComponent::SetCameraRelativeInputDirection(FVector InputDirection)
+{
+	if (!CharacterRef) { return; }
+
+	// InputDirection should be a 2D vector (X, Y) representing movement input
+	// We need to convert it from camera-relative space to world space
+
+	if (InputDirection.IsNearlyZero())
+	{
+		LastInputDirection = FVector::ZeroVector;
+		return;
+	}
+
+	// Get the player controller and camera
+	APlayerController* PlayerController = Cast<APlayerController>(CharacterRef->GetController());
+	if (!PlayerController) { return; }
+
+	// Get camera forward and right vectors
+	FVector CameraForward = PlayerController->GetControlRotation().Vector();
+	FVector CameraRight = FRotator(0.0f, PlayerController->GetControlRotation().Yaw, 0.0f).RotateVector(FVector::RightVector);
+
+	// Zero out Z component for horizontal-only calculation
+	CameraForward.Z = 0.0f;
+	CameraRight.Z = 0.0f;
+	CameraForward.Normalize();
+	CameraRight.Normalize();
+
+	// Convert input to world space based on camera orientation
+	// InputDirection.X = forward/back, InputDirection.Y = right/left
+	FVector WorldInputDirection = (CameraForward * InputDirection.X) + (CameraRight * InputDirection.Y);
+	WorldInputDirection.Z = 0.0f;
+	WorldInputDirection.Normalize();
+
+	LastInputDirection = WorldInputDirection;
+}
+
+void UCombatComponent::ApplySmoothRotationTowardsInput(float DeltaTime)
+{
+	if (!CharacterRef || LastInputDirection.IsNearlyZero())
+	{
+		return;
+	}
+
+	// Don't apply smooth rotation if locked on
+	if (IsLockedOn())
+	{
+		return;
+	}
+
+	// Don't apply smooth rotation if this is the finisher attack
+	if (IsFinisherAttack())
+	{
+		return;
+	}
+
+	// Get target rotation from input direction
+	FRotator TargetRotation = UKismetMathLibrary::MakeRotFromX(LastInputDirection);
+	FRotator TargetYaw = FRotator(0.0f, TargetRotation.Yaw, 0.0f);
+
+	// Get current rotation
+	FRotator CurrentRotation = CharacterRef->GetActorRotation();
+
+	if (bUseSmoothedRotation)
+	{
+		// Smoothly interpolate towards target rotation
+		// Using normalized Yaw difference to handle angle wrapping (0-360 degrees)
+		FRotator InterpolatedRotation = FMath::RInterpTo(
+			CurrentRotation,
+			TargetYaw,
+			DeltaTime,
+			RotationInterpSpeed
+		);
+		CharacterRef->SetActorRotation(InterpolatedRotation);
+	}
+	else
+	{
+		// Instant rotation (original behavior)
+		CharacterRef->SetActorRotation(TargetYaw);
+	}
+}
 
 // Called every frame
 void UCombatComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	// ...
+	// Apply smooth rotation during attacks
+	if (IsAttacking())
+	{
+		ApplySmoothRotationTowardsInput(DeltaTime);
+	}
 }
 
 void UCombatComponent::ComboAttack()
@@ -55,11 +144,11 @@ void UCombatComponent::ComboAttack()
 
 	if (!bCanQueueNextAttack) { return; }
 
-	ULockOnComponent* LockOnComp = CharacterRef->FindComponentByClass<ULockOnComponent>();
-	if (LockOnComp && LockOnComp->GetCurrentTargetActor())
+	if (LockOnComponentRef && LockOnComponentRef->GetCurrentTargetActor())
 	{
-		LockOnComp->FaceCurrentTargetForOneFrame();
+		LockOnComponentRef->FaceCurrentTargetForOneFrame();
 	}
+	// Smooth rotation is now handled in TickComponent via ApplySmoothRotationTowardsInput
 
 	bCanQueueNextAttack = false;
 	bAttackInputBuffered = false;
@@ -110,11 +199,11 @@ void UCombatComponent::HeavyAttack()
 
 	bCanQueueNextAttack = false;
 
-	ULockOnComponent* LockOnComp = CharacterRef->FindComponentByClass<ULockOnComponent>();
-	if (LockOnComp && LockOnComp->GetCurrentTargetActor())
+	if (LockOnComponentRef && LockOnComponentRef->GetCurrentTargetActor())
 	{
-		LockOnComp->FaceCurrentTargetForOneFrame();
+		LockOnComponentRef->FaceCurrentTargetForOneFrame();
 	}
+	// Smooth rotation is now handled in TickComponent via ApplySmoothRotationTowardsInput
 
 	// Play the appropriate animation based on movement state
 	UAnimMontage* SelectedAnimation = bIsMoving ? MovingHeavyAttackAnimation : StandingHeavyAttackAnimation;
@@ -203,53 +292,51 @@ void UCombatComponent::PlaySpecialAttack()
 
 	bCanQueueNextAttack = false;
 
-	ULockOnComponent* LockOnComp = CharacterRef->FindComponentByClass<ULockOnComponent>();
-	if (LockOnComp && LockOnComp->GetCurrentTargetActor())
+	if (LockOnComponentRef && LockOnComponentRef->GetCurrentTargetActor())
 	{
-		LockOnComp->FaceCurrentTargetForOneFrame();
+		LockOnComponentRef->FaceCurrentTargetForOneFrame();
 	}
 
 	float AttackAnimDuration = CharacterRef->PlayAnimMontage(SpecialAttack);
 
 	// Broadcast the attack event and deduct special gage
 	OnSpecialAttackDelegate.Broadcast();
-	
+
 }
 
 void UCombatComponent::PlayTeleportSpecialAttack()
 {
     if (!bCanQueueNextAttack) { return; }
 
-    ULockOnComponent* LockOnComp = CharacterRef->FindComponentByClass<ULockOnComponent>();
-    AActor* Target = LockOnComp ? LockOnComp->GetCurrentTargetActor() : nullptr;
+	AActor* Target = LockOnComponentRef ? LockOnComponentRef->GetCurrentTargetActor() : nullptr;
 
-    if (!IsValid(Target))
-    {
-        // No target, just play regular special
-        PlaySpecialAttack();
-        return;
-    }
+	if (!IsValid(Target))
+	{
+		// No target, just play regular special
+		PlaySpecialAttack();
+		return;
+	}
 
-    // Set pending state instead of scheduling a timer so an AnimNotify can trigger the teleport at the correct frame
-    PendingTeleportTarget = Target;
-    bTeleportPending = true;
+	// Set pending state instead of scheduling a timer so an AnimNotify can trigger the teleport at the correct frame
+	PendingTeleportTarget = Target;
+	bTeleportPending = true;
 
-    // Play the prep montage; the AnimNotify should call ExecuteTeleportSpecialAttack() when ready
-    if (TeleportPrepMontage && CharacterRef)
-    {
-        // Pause lock-on camera control while the prep montage and teleport sequence are running
-        if (ULockOnComponent* LocComp = CharacterRef->FindComponentByClass<ULockOnComponent>())
-        {
-            LocComp->PauseCameraControl();
-        }
+	// Play the prep montage; the AnimNotify should call ExecuteTeleportSpecialAttack() when ready
+	if (TeleportPrepMontage && CharacterRef)
+	{
+		// Pause lock-on camera control while the prep montage and teleport sequence are running
+		if (LockOnComponentRef)
+		{
+			LockOnComponentRef->PauseCameraControl();
+		}
 
-        CharacterRef->PlayAnimMontage(TeleportPrepMontage);
-    }
-    else
-    {
-        // if no prep montage, just execute immediately
-        ExecuteTeleportSpecialAttack();
-    }
+		CharacterRef->PlayAnimMontage(TeleportPrepMontage);
+	}
+	else
+	{
+		// if no prep montage, just execute immediately
+		ExecuteTeleportSpecialAttack();
+	}
 }
 
 void UCombatComponent::ResetComboCounter()
@@ -341,19 +428,31 @@ void UCombatComponent::ExecuteTeleportSpecialAttack()
             bCanQueueNextAttack = true;
             // Resume lock-on camera control when the teleport special attack completes
             if (CharacterRef)
-            {
-                if (ULockOnComponent* LocComp = CharacterRef->FindComponentByClass<ULockOnComponent>())
-                {
-                    LocComp->ResumeCameraControl();
-                }
-            }
-        }, Recovery, false);
-    }
+			{
+				if (LockOnComponentRef)
+				{
+					LockOnComponentRef->ResumeCameraControl();
+				}
+			}
+		}, Recovery, false);
+	}
 }
 
 bool UCombatComponent::IsAttacking() const
 {
 	return !bCanQueueNextAttack;
+}
+
+bool UCombatComponent::IsFinisherAttack() const
+{
+	return ComboCounter == 0;
+}
+
+bool UCombatComponent::IsLockedOn() const
+{
+	if (!LockOnComponentRef) { return false; }
+
+	return IsValid(LockOnComponentRef->GetCurrentTargetActor());
 }
 
 void UCombatComponent::StopAttackAnimation()

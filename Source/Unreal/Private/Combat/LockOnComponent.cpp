@@ -153,15 +153,19 @@ void ULockOnComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 		return;
 	}
 
-    if (!bIsSideScroller && bCameraControlEnabled)
-    {
-        TargetLocation.Z -= 125; //adjusting so the camera looks more downward
+	if (!bIsSideScroller && bCameraControlEnabled)
+	{
+		TargetLocation.Z -= 125; //adjusting so the camera looks more downward
 
-        FRotator NewRotation{ UKismetMathLibrary::FindLookAtRotation(
-            CurrentLocation, TargetLocation
-        ) };
-        Controller->SetControlRotation(NewRotation);
-    }
+		FRotator NewRotation{ UKismetMathLibrary::FindLookAtRotation(
+			CurrentLocation, TargetLocation
+		) };
+
+		// Clamp the pitch angle to prevent camera from looking too far up or down
+		NewRotation.Pitch = FMath::Clamp(NewRotation.Pitch, MinLockOnPitch, MaxLockOnPitch);
+
+		Controller->SetControlRotation(NewRotation);
+	}
 
 	// Update nearby targets for target switching
 	FindNearbyTargets();
