@@ -5,7 +5,11 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 8)
+void UTeleportCameraAnimNotifyState::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float TotalDuration, const FAnimNotifyEventReference& EventReference)
+#else
 void UTeleportCameraAnimNotifyState::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float TotalDuration)
+#endif
 {
     if (!MeshComp) return;
 
@@ -35,7 +39,11 @@ void UTeleportCameraAnimNotifyState::NotifyBegin(USkeletalMeshComponent* MeshCom
     SpringArm->bUsePawnControlRotation = false;
 }
 
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 8)
+void UTeleportCameraAnimNotifyState::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float FrameDeltaTime, const FAnimNotifyEventReference& EventReference)
+#else
 void UTeleportCameraAnimNotifyState::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float FrameDeltaTime)
+#endif
 {
     if (!bInitialized || !SpringArm.IsValid()) return;
     if (Duration <= 0.0f) return;
@@ -73,7 +81,11 @@ void UTeleportCameraAnimNotifyState::NotifyTick(USkeletalMeshComponent* MeshComp
     SpringArm->SetRelativeRotation(NewRot);
 }
 
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 8)
+void UTeleportCameraAnimNotifyState::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
+#else
 void UTeleportCameraAnimNotifyState::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation)
+#endif
 {
     if (!bInitialized || !SpringArm.IsValid()) return;
 
