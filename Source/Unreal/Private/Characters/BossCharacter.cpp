@@ -42,47 +42,47 @@ void ABossCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-    ControllerRef = GetController<AAIController>();
+	ControllerRef = GetController<AAIController>();
 
-    if (ControllerRef)
-    {
-        BlackboardComp = ControllerRef->GetBlackboardComponent();
-        if (BlackboardComp)
-        {
-            BlackboardComp->SetValueAsEnum(TEXT("CurrentState"), InitialState);
-        }
-        else
-        {
-            UE_LOG(LogTemp, Warning, TEXT("[%s] Controller has no BlackboardComponent."), *GetName());
-        }
-    }
-    else
-    {
-        UE_LOG(LogTemp, Warning, TEXT("[%s] No AIController found."), *GetName());
-    }
+	if (ControllerRef)
+	{
+		BlackboardComp = ControllerRef->GetBlackboardComponent();
+		if (BlackboardComp)
+		{
+			BlackboardComp->SetValueAsEnum(TEXT("CurrentState"), InitialState);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[%s] Controller has no BlackboardComponent."), *GetName());
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[%s] No AIController found."), *GetName());
+	}
 
-    // Safely bind to the player's OnZeroHealth delegate if possible
-    APlayerController* PC = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr;
-    if (!PC)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("[%s] No PlayerController found."), *GetName());
-    }
-    else
-    {
-        AMainCharacter* MainChar = PC->GetPawn<AMainCharacter>();
-        if (!MainChar)
-        {
-            UE_LOG(LogTemp, Warning, TEXT("[%s] No MainCharacter found."), *GetName());
-        }
-        else if (MainChar->StatsComp)
-        {
-            MainChar->StatsComp->OnZeroHealthDelegate.AddDynamic(this, &ABossCharacter::HandlePlayerDeath);
-        }
-        else
-        {
-            UE_LOG(LogTemp, Warning, TEXT("[%s] MainCharacter has no StatsComp."), *GetName());
-        }
-    }
+	// Safely bind to the player's OnZeroHealth delegate if possible
+	APlayerController* PC = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr;
+	if (!PC)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[%s] No PlayerController found."), *GetName());
+	}
+	else
+	{
+		AMainCharacter* MainChar = PC->GetPawn<AMainCharacter>();
+		if (!MainChar)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[%s] No MainCharacter found."), *GetName());
+		}
+		else if (MainChar->StatsComp)
+		{
+			MainChar->StatsComp->OnZeroHealthDelegate.AddDynamic(this, &ABossCharacter::HandlePlayerDeath);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[%s] MainCharacter has no StatsComp."), *GetName());
+		}
+	}
 
 	float WeaponStrength{ 10.0f };
 
@@ -128,6 +128,25 @@ void ABossCharacter::BeginPlay()
 				SecondaryEquippedWeapon->WeaponTraceComp->SetWeaponStrength(WeaponStrength);
 			}
 			SecondaryEquippedWeapon->SetCharacterRef(this);
+		}
+	}
+
+	GetWorld()->GetTimerManager().SetTimer(
+		NavMeshReadyTimerHandle,
+		this,
+		&ABossCharacter::DelayedStartBehaviorTree,
+		1.0f,
+		false
+	);
+}
+
+void ABossCharacter::DelayedStartBehaviorTree()
+{
+	if (ControllerRef)
+	{
+		if (UBrainComponent* Brain = ControllerRef->GetBrainComponent())
+		{
+			Brain->RestartLogic();
 		}
 	}
 }

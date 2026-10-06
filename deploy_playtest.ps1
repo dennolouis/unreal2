@@ -23,16 +23,27 @@ $LinuxItchTarget = "dennolouis/play-test-unreal:linux"
 
 $BuildFailed =$false
 
+# Helper function to clear a directory safely
+function Clean-StagingDir {
+    param ([string]$Path)
+    if (Test-Path $Path) {
+        Write-Host "Cleaning staging directory: $Path..." -ForegroundColor DarkGray
+        Remove-Item -Path $Path -Recurse -Force
+    }
+}
+
 # -------------------------------------------------------------------
 # WINDOWS BUILD & DEPLOY
 # -------------------------------------------------------------------
 if ($Win -or$All) {
+    Clean-StagingDir -Path $WinStagingDir
+
     Write-Host "`n[1/2] Packaging Windows Game..." -ForegroundColor Cyan
     & $UnrealEnginePath BuildCookRun "-project=$ProjectPath" -noP4 -platform=Win64 -clientconfig=Shipping -cook -build -stage -pak -archive "-archivedirectory=$WinStagingDir"
 
     if ($LASTEXITCODE -eq 0) {
         Write-Host "Uploading Windows build to Itch.io..." -ForegroundColor Green
-        butler push "$WinStagingDir\Windows" $WinItchTarget
+        butler push "$WinStagingDir" $WinItchTarget
     } else {
         Write-Host "Windows Build Failed. Skipping upload." -ForegroundColor Red
         $BuildFailed = $true
@@ -43,13 +54,14 @@ if ($Win -or$All) {
 # LINUX BUILD & DEPLOY
 # -------------------------------------------------------------------
 if ($Linux -or $All) {
+    Clean-StagingDir -Path $LinuxStagingDir
+
     Write-Host "`n[2/2] Packaging Linux Game..." -ForegroundColor Cyan
     & $UnrealEnginePath BuildCookRun "-project=$ProjectPath" -noP4 -platform=Linux -clientconfig=Shipping -cook -build -stage -pak -archive "-archivedirectory=$LinuxStagingDir"
 
     if ($LASTEXITCODE -eq 0) {
         Write-Host "Uploading Linux build to Itch.io..." -ForegroundColor Green
-        # UE usually names the packaged output folder "Linux" or "LinuxNoEditor"
-        $LinuxFolder = if (Test-Path "$LinuxStagingDir\Linux") { "$LinuxStagingDir\Linux" } else { "$LinuxStagingDir\LinuxNoEditor" }
+        $LinuxFolder = if (Test-Path "$LinuxStagingDir") { "$LinuxStagingDir" } else { "$LinuxStagingDir\LinuxNoEditor" }
         butler push $LinuxFolder $LinuxItchTarget
     } else {
         Write-Host "Linux Build Failed. Skipping upload." -ForegroundColor Red

@@ -92,6 +92,23 @@ void ABasicEnemy::BeginPlay()
 			SecondaryEquippedWeapon->SetCharacterRef(this);
 		}
 	}
+
+	if (StateTreeComp)
+	{
+		FTimerHandle NavMeshReadyTimerHandle;
+		GetWorld()->GetTimerManager().SetTimer(
+			NavMeshReadyTimerHandle,
+			[this]()
+			{
+				if (StateTreeComp)
+				{
+					StateTreeComp->StartLogic();
+				}
+			},
+			1.0f,
+			false
+		);
+	}
 }
 
 // Called every frame
