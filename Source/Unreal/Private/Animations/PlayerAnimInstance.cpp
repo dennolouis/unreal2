@@ -2,6 +2,7 @@
 
 
 #include "Animations/PlayerAnimInstance.h"
+#include "KismetAnimationLibrary.h"
 
 void UPlayerAnimInstance::UpdateSpeed()
 {
@@ -27,7 +28,7 @@ void UPlayerAnimInstance::UpdateDirection()
 
 	if (!bIsInCombat) { return; }
 
-	CurrentDirection = CalculateDirection(
+	CurrentDirection = UKismetAnimationLibrary::CalculateDirection(
 		PawnRef->GetVelocity(),
 		PawnRef->GetActorRotation()
 	);

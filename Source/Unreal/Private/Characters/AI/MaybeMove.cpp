@@ -54,7 +54,6 @@ EBTNodeResult::Type UMaybeMove::ExecuteTask(UBehaviorTreeComponent& OwnerComp, u
             false
         );
 
-        return EBTNodeResult::InProgress;
     }
     else
     {
