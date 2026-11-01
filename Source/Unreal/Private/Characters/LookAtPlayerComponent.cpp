@@ -3,6 +3,9 @@
 
 #include "Characters/LookAtPlayerComponent.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Engine/World.h"
+#include "GameFramework/Pawn.h"
+#include "GameFramework/PlayerController.h"
 
 // Sets default values for this component's properties
 ULookAtPlayerComponent::ULookAtPlayerComponent()
@@ -30,15 +33,35 @@ void ULookAtPlayerComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	if (!bCanRotate) { return; }
-
 	AActor* OwnerRef{ GetOwner() };
-	FVector OwnerLocation{ OwnerRef->GetActorLocation() };
+	UWorld* World{ GetWorld() };
 
 	APlayerController* PlayerController{
-		GetWorld()->GetFirstPlayerController()
+		(IsValid(OwnerRef) && World) ? World->GetFirstPlayerController() : nullptr
 	};
-	APawn* PlayerPawn{ PlayerController->GetPawn() };
+	APawn* PlayerPawn{
+		IsValid(PlayerController) ? PlayerController->GetPawn() : nullptr
+	};
+
+	// Rotate only while the notify window is open and there is a real player pawn to face.
+	if (!bCanRotate || !IsValid(OwnerRef) || !IsValid(PlayerPawn) || PlayerPawn == OwnerRef)
+	{
+		if (bRotationActive)
+		{
+			bRotationActive = false;
+			UE_LOG(LogTemp, Log, TEXT("[LookAtPlayer] %s stopped rotating"), *GetNameSafe(OwnerRef));
+		}
+
+		return;
+	}
+
+	if (!bRotationActive)
+	{
+		bRotationActive = true;
+		UE_LOG(LogTemp, Log, TEXT("[LookAtPlayer] %s started rotating (Speed=%.1f)"), *GetNameSafe(OwnerRef), Speed);
+	}
+
+	FVector OwnerLocation{ OwnerRef->GetActorLocation() };
 	FVector PlayerLocation{ PlayerPawn->GetActorLocation() };
 
 	FRotator DesiredRotation{

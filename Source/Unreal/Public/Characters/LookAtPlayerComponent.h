@@ -22,6 +22,10 @@ public:
 	UPROPERTY(VisibleAnywhere)
 	bool bCanRotate{ false };
 
+private:
+	/** Edge-trigger flag so the start/stop log lines fire once per window instead of every frame. */
+	bool bRotationActive{ false };
+
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
