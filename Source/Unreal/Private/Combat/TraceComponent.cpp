@@ -70,6 +70,14 @@ void UTraceComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 		GetOwner()
 	};
 
+	for (AActor* IgnoredActor : PermanentIgnoredActors)
+	{
+		if (IsValid(IgnoredActor))
+		{
+			IgnoreParams.AddIgnoredActor(IgnoredActor);
+		}
+	}
+
 	bool bHasFoundTargets{ GetWorld()->SweepMultiByChannel(
 		OutResults,
 		StartSocketLocation,
@@ -140,6 +148,14 @@ void UTraceComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 		OnSuccessfulTraceHitDelegate.Broadcast();
 	}
 
+}
+
+void UTraceComponent::AddActorToAlwaysIgnore(AActor* ActorToIgnore)
+{
+	if (!IsValid(ActorToIgnore)) { return; }
+
+	PermanentIgnoredActors.AddUnique(ActorToIgnore);
+	UE_LOG(LogTemp, Log, TEXT("[TraceComp] %s will always ignore %s"), *GetNameSafe(GetOwner()), *ActorToIgnore->GetName());
 }
 
 void UTraceComponent::HandleResetAttack()

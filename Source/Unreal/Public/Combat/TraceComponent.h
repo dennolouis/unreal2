@@ -62,6 +62,13 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void EndAttack() { bIsAttacking = false; HandleResetAttack(); }
 
+	// Actors that are always excluded from this component's sweep (e.g. a summon's summoner). Not cleared by HandleResetAttack.
+	UFUNCTION(BlueprintCallable)
+	void AddActorToAlwaysIgnore(AActor* ActorToIgnore);
+
+	UPROPERTY(VisibleAnywhere)
+	TArray<TObjectPtr<AActor>> PermanentIgnoredActors;
+
 	UPROPERTY(VisibleAnywhere)
 	bool bIsAttacking{ false };
 
