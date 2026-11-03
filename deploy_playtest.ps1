@@ -10,7 +10,7 @@ if (-not $Win -and -not$Linux) {
     $All =$true
 }
 
-$UnrealEnginePath = "C:\Program Files\Epic Games\UE_5.7\Engine\Build\BatchFiles\RunUAT.bat"
+$UnrealEnginePath = "C:\Program Files\Epic Games\UE_5.8\Engine\Build\BatchFiles\RunUAT.bat"
 $ProjectPath      = "$PSScriptRoot\Unreal.uproject"
 
 # Staging Directories

@@ -42,6 +42,28 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Summon|Charge")
 	float MaxChargeDuration{ 5.0f };
 
+	// One-shot effect spawned at the summon's feet when it arrives (e.g. black lightning strike)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Summon|VFX")
+	class UNiagaraSystem* SpawnVFX{ nullptr };
+
+	// One-shot effect spawned at the summon's feet when it leaves (e.g. collapsing smoke column)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Summon|VFX")
+	class UNiagaraSystem* DespawnVFX{ nullptr };
+
+	// Seconds after spawning (SpawnVFX plays) before the body starts dissolving in
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Summon|VFX", meta = (ClampMin = "0.0"))
+	float SpawnRevealDelay{ 0.15f };
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Summon|VFX", meta = (ClampMin = "0.0"))
+	float FadeInDuration{ 0.6f };
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Summon|VFX", meta = (ClampMin = "0.0"))
+	float FadeOutDuration{ 0.9f };
+
+	// Material scalar driven on every mesh slot: 0 = visible, 1 = fully dissolved
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Summon|VFX")
+	FName DissolveParamName{ TEXT("Dissolve") };
+
 	// Called by the spawner between SpawnActorDeferred and FinishSpawning
 	UFUNCTION(BlueprintCallable, Category = "Summon")
 	void InitializeSummon(AActor* InSummoner, AActor* InTarget, FVector InFallbackLocation);
@@ -53,10 +75,16 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Summon")
 	void FinishCharge();
 
+	// Stops the flames, plays DespawnVFX, dissolves the body and destroys the summon
+	UFUNCTION(BlueprintCallable, Category = "Summon")
+	void BeginDespawn();
+
 	UFUNCTION(BlueprintPure, Category = "Summon")
 	AActor* GetSummoner() const { return Summoner.Get(); }
 
 	virtual float GetDamage() override { return Damage; }
+
+	virtual void Tick(float DeltaSeconds) override;
 
 protected:
 	virtual void BeginPlay() override;
@@ -68,6 +96,9 @@ protected:
 
 	UFUNCTION()
 	void HandleChargeTimeout();
+
+	UFUNCTION()
+	void StartReveal();
 
 private:
 	TWeakObjectPtr<AActor> Summoner;
@@ -83,6 +114,35 @@ private:
 	bool bChargeFinished{ false };
 
 	FTimerHandle ChargeTimeoutHandle;
+
+	FTimerHandle RevealHandle;
+
+	FTimerHandle DespawnHandle;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<class UMaterialInstanceDynamic>> DissolveMIDs;
+
+	float CurrentDissolve{ 1.0f };
+
+	float FadeFrom{ 1.0f };
+
+	float FadeTo{ 0.0f };
+
+	float FadeDuration{ 0.0f };
+
+	float FadeElapsed{ 0.0f };
+
+	bool bFading{ false };
+
+	bool bDespawning{ false };
+
+	void StartFade(float From, float To, float Duration);
+
+	void SetDissolve(float Value);
+
+	void SetNiagaraComponentsActive(bool bActive, bool bImmediate);
+
+	FVector GetFeetLocation() const;
 
 	class UBossAnimInstance* GetBossAnim() const;
 

@@ -7,10 +7,16 @@
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "TimerManager.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraComponent.h"
+#include "NiagaraSystem.h"
+#include "Materials/MaterialInstanceDynamic.h"
 
 AGruxChargeSummon::AGruxChargeSummon()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	// Tick is only enabled while a dissolve fade is running
+	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bStartWithTickEnabled = false;
 
 	TraceComp = CreateDefaultSubobject<UTraceComponent>(TEXT("Trace Component"));
 
@@ -87,6 +93,41 @@ void AGruxChargeSummon::BeginPlay()
 			SkelMesh->GetAnimInstance() ? *SkelMesh->GetAnimInstance()->GetClass()->GetName() : TEXT("None"));
 	}
 
+	// Shadow arrival: hide the body, play the strike VFX, then dissolve in
+	if (USkeletalMeshComponent* SkelMesh = GetMesh())
+	{
+		DissolveMIDs.Reset();
+		for (int32 Index = 0; Index < SkelMesh->GetNumMaterials(); ++Index)
+		{
+			if (UMaterialInstanceDynamic* MID = SkelMesh->CreateDynamicMaterialInstance(Index))
+			{
+				DissolveMIDs.Add(MID);
+			}
+		}
+	}
+	SetDissolve(1.0f);
+	SetNiagaraComponentsActive(false, true);
+
+	if (SpawnVFX)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, SpawnVFX, GetFeetLocation(), GetActorRotation());
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Summon] %s has no SpawnVFX set"), *GetName());
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("[Summon] %s hidden for arrival (%d dissolve MIDs), reveal in %.2fs"), *GetName(), DissolveMIDs.Num(), SpawnRevealDelay);
+
+	if (SpawnRevealDelay > 0.0f)
+	{
+		GetWorldTimerManager().SetTimer(RevealHandle, this, &AGruxChargeSummon::StartReveal, SpawnRevealDelay, false);
+	}
+	else
+	{
+		StartReveal();
+	}
+
 	if (UBossAnimInstance* Anim = GetBossAnim())
 	{
 		// Starts the roar -> TravelMode_Start (StartCharge notify) -> TravelMode_Fwd sequence
@@ -108,6 +149,8 @@ void AGruxChargeSummon::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	}
 
 	GetWorldTimerManager().ClearTimer(ChargeTimeoutHandle);
+	GetWorldTimerManager().ClearTimer(RevealHandle);
+	GetWorldTimerManager().ClearTimer(DespawnHandle);
 
 	UE_LOG(LogTemp, Warning, TEXT("[Summon] %s despawned"), *GetName());
 
@@ -207,10 +250,155 @@ void AGruxChargeSummon::FinishCharge()
 		Anim->bIsCharging = false;
 	}
 
-	SetLifeSpan(FMath::Max(DespawnDelayAfterAttack, 0.01f));
+	GetWorldTimerManager().SetTimer(DespawnHandle, this, &AGruxChargeSummon::BeginDespawn, FMath::Max(DespawnDelayAfterAttack, 0.01f), false);
 
 	UE_LOG(LogTemp, Warning, TEXT("[Summon] %s charge finished at %s, attacking; despawn in %.2fs"),
 		*GetName(), *GetActorLocation().ToString(), DespawnDelayAfterAttack);
+}
+
+void AGruxChargeSummon::StartReveal()
+{
+	if (bDespawning) { return; }
+
+	UE_LOG(LogTemp, Warning, TEXT("[Summon] %s reveal started (%.2fs dissolve-in)"), *GetName(), FadeInDuration);
+
+	SetNiagaraComponentsActive(true, false);
+	StartFade(CurrentDissolve, 0.0f, FadeInDuration);
+}
+
+void AGruxChargeSummon::BeginDespawn()
+{
+	if (bDespawning) { return; }
+	bDespawning = true;
+
+	GetWorldTimerManager().ClearTimer(RevealHandle);
+	GetWorldTimerManager().ClearTimer(DespawnHandle);
+	GetWorldTimerManager().ClearTimer(ChargeTimeoutHandle);
+
+	UE_LOG(LogTemp, Warning, TEXT("[Summon] %s despawn started at %s (%.2fs dissolve-out)"), *GetName(), *GetActorLocation().ToString(), FadeOutDuration);
+
+	// Let the flames finish their life instead of popping off
+	SetNiagaraComponentsActive(false, false);
+
+	// Freeze in place and stop blocking anything while collapsing into smoke
+	if (AAIController* AIC = GetAIController())
+	{
+		AIC->StopMovement();
+	}
+	if (UCharacterMovementComponent* Move = GetCharacterMovement())
+	{
+		Move->StopMovementImmediately();
+		Move->DisableMovement();
+	}
+	if (UCapsuleComponent* Capsule = GetCapsuleComponent())
+	{
+		Capsule->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
+
+	if (DespawnVFX)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, DespawnVFX, GetFeetLocation(), GetActorRotation());
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Summon] %s has no DespawnVFX set"), *GetName());
+	}
+
+	StartFade(CurrentDissolve, 1.0f, FadeOutDuration);
+
+	// Safety net in case the fade never completes
+	SetLifeSpan(FadeOutDuration + 1.0f);
+}
+
+void AGruxChargeSummon::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	if (!bFading) { return; }
+
+	FadeElapsed += DeltaSeconds;
+	const float Alpha{ FadeDuration > KINDA_SMALL_NUMBER ? FMath::Clamp(FadeElapsed / FadeDuration, 0.0f, 1.0f) : 1.0f };
+	SetDissolve(FMath::Lerp(FadeFrom, FadeTo, Alpha));
+
+	if (Alpha >= 1.0f)
+	{
+		bFading = false;
+		SetActorTickEnabled(false);
+
+		if (bDespawning)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[Summon] %s dissolve-out complete, destroying"), *GetName());
+			Destroy();
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[Summon] %s fully revealed"), *GetName());
+		}
+	}
+}
+
+void AGruxChargeSummon::StartFade(float From, float To, float Duration)
+{
+	FadeFrom = From;
+	FadeTo = To;
+	FadeDuration = Duration;
+	FadeElapsed = 0.0f;
+
+	if (Duration <= KINDA_SMALL_NUMBER)
+	{
+		SetDissolve(To);
+		bFading = false;
+		if (bDespawning)
+		{
+			Destroy();
+		}
+		return;
+	}
+
+	bFading = true;
+	SetActorTickEnabled(true);
+}
+
+void AGruxChargeSummon::SetDissolve(float Value)
+{
+	CurrentDissolve = Value;
+	for (UMaterialInstanceDynamic* MID : DissolveMIDs)
+	{
+		if (MID)
+		{
+			MID->SetScalarParameterValue(DissolveParamName, Value);
+		}
+	}
+}
+
+void AGruxChargeSummon::SetNiagaraComponentsActive(bool bActive, bool bImmediate)
+{
+	TInlineComponentArray<UNiagaraComponent*> NiagaraComps(this);
+	for (UNiagaraComponent* Comp : NiagaraComps)
+	{
+		if (!Comp) { continue; }
+
+		if (bActive)
+		{
+			Comp->Activate(true);
+		}
+		else if (bImmediate)
+		{
+			Comp->DeactivateImmediate();
+		}
+		else
+		{
+			Comp->Deactivate();
+		}
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[Summon] %s set %d Niagara component(s) %s"), *GetName(), NiagaraComps.Num(), bActive ? TEXT("active") : TEXT("inactive"));
+}
+
+FVector AGruxChargeSummon::GetFeetLocation() const
+{
+	const float HalfHeight{ GetCapsuleComponent() ? GetCapsuleComponent()->GetScaledCapsuleHalfHeight() : 0.0f };
+	return GetActorLocation() - FVector(0.0, 0.0, HalfHeight);
 }
 
 UBossAnimInstance* AGruxChargeSummon::GetBossAnim() const
