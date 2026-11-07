@@ -6,6 +6,7 @@
 #include "Components/ActorComponent.h"
 #include "SummonComponent.generated.h"
 
+class ACharacter;
 class AGruxChargeSummon;
 
 /**
@@ -26,7 +27,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Summon|Grux", meta = (ClampMin = "0.0"))
 	float GruxSpawnDistance{ 250.0f };
 
-	// How far forward the Grux charges when there is no lock-on target
+	// Radius in cm to find the nearest enemy in front when there is no lock-on target.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Summon|Grux", meta = (ClampMin = "0.0"))
+	float GruxAutoTargetRadius{ 750.0f };
+
+	// How far forward the Grux charges when neither lock-on nor auto-targeting finds a target.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Summon|Grux", meta = (ClampMin = "0.0"))
 	float GruxChargeRange{ 1500.0f };
 
@@ -36,4 +41,7 @@ public:
 	// Spawns the Grux and starts its charge. Returns false if it could not be summoned.
 	UFUNCTION(BlueprintCallable, Category = "Summon|Grux")
 	bool TrySummonGruxCharge();
+
+private:
+	AActor* FindNearbyGruxTarget(const ACharacter* OwnerCharacter) const;
 };
