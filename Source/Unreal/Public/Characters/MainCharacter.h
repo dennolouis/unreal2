@@ -44,6 +44,9 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	class UPlayerActtionsComponent* PlayerActionsComp;
 
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	class UHitStopComponent* HitStopComp;
+
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
 	TSubclassOf<class AWeapon> PrimaryWeaponClass;
 

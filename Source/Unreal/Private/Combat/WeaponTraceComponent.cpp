@@ -5,6 +5,8 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "GameFramework/DamageType.h" // Include for damage handling
 #include "Engine/DamageEvents.h"
+#include "Combat/HitStopComponent.h"
+#include "Interfaces/Enemy.h"
 
 // Constructor
 UWeaponTraceComponent::UWeaponTraceComponent()
@@ -78,6 +80,19 @@ void UWeaponTraceComponent::HandleTrace()
         FDamageEvent DamageEvent; // Proper instantiation
         HitActor->TakeDamage(WeaponStrength * HitMultiplier, DamageEvent, GetOwner()->GetInstigatorController(), GetOwner());
         TargetsToIgnore.AddUnique(HitActor);
+
+        // Hit-stop: only when the weapon's owner has a HitStopComponent (the player) and the target is an enemy
+        if (HitActor->Implements<UEnemy>())
+        {
+            AActor* WeaponOwner = GetOwner() ? GetOwner()->GetOwner() : nullptr;
+            if (WeaponOwner)
+            {
+                if (UHitStopComponent* HitStop = WeaponOwner->FindComponentByClass<UHitStopComponent>())
+                {
+                    HitStop->TriggerHitStop(HitActor, HitMultiplier);
+                }
+            }
+        }
 
         if (HitParticleTemplate)
         {

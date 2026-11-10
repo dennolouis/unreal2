@@ -11,6 +11,7 @@
 #include "Combat/BlockComponent.h"
 #include "Combat/Weapon.h"
 #include "Combat/WeaponTraceComponent.h"
+#include "Combat/HitStopComponent.h"
 #include "Characters/PlayerActtionsComponent.h"
 #include <Kismet/KismetMathLibrary.h>
 #include "NiagaraComponent.h"
@@ -31,6 +32,7 @@ AMainCharacter::AMainCharacter()
 	TraceComp = CreateDefaultSubobject<UTraceComponent>(TEXT("Trace Component"));
 	BlockComp = CreateDefaultSubobject<UBlockComponent>(TEXT("Block Component"));
 	PlayerActionsComp = CreateDefaultSubobject<UPlayerActtionsComponent>(TEXT("Player Actions Component"));
+	HitStopComp = CreateDefaultSubobject<UHitStopComponent>(TEXT("HitStop Component"));
 
 	AuraEffectSpawnPoint = CreateDefaultSubobject<USceneComponent>(TEXT("Gather Effect Spawn Point"));
 	AuraEffectSpawnPoint->SetupAttachment(RootComponent);
