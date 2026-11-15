@@ -8,7 +8,7 @@ public class Unreal : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "AIModule", "AnimGraphRuntime", "Niagara", "StateTreeModule", "GameplayStateTreeModule" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "AIModule", "AnimGraphRuntime", "Niagara", "StateTreeModule", "GameplayStateTreeModule", "UMG", "SlateCore" });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
 
