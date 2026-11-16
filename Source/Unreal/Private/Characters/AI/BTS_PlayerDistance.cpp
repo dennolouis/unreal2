@@ -7,20 +7,27 @@
 
 void UBTS_PlayerDistance::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds)
 {
-	FVector CurrentLocation{
-		OwnerComp.GetAIOwner()->GetPawn()->GetActorLocation()
+	const AAIController* AIOwner{ OwnerComp.GetAIOwner() };
+	const APawn* OwnedPawn{ AIOwner ? AIOwner->GetPawn() : nullptr };
+	UBlackboardComponent* Blackboard{ OwnerComp.GetBlackboardComponent() };
+
+	const UWorld* World{ GetWorld() };
+	const APlayerController* PlayerController{ World ? World->GetFirstPlayerController() : nullptr };
+	const APawn* PlayerPawn{ PlayerController ? PlayerController->GetPawn() : nullptr };
+
+	// The player pawn is null while the player is dead / not yet (re)possessed.
+	// Keep the last Distance value instead of dereferencing a null pawn.
+	if (!OwnedPawn || !PlayerPawn || !Blackboard)
+	{
+		return;
+	}
+
+	const float Distance{
+		static_cast<float>(FVector::Distance(
+			OwnedPawn->GetActorLocation(),
+			PlayerPawn->GetActorLocation()
+		))
 	};
 
-	FVector PlayerLocation{
-		GetWorld()->GetFirstPlayerController()
-		->GetPawn()
-		->GetActorLocation()
-	};
-
-	float Distance{ 
-		static_cast<float>(FVector::Distance(CurrentLocation, PlayerLocation))
-	};
-
-	OwnerComp.GetBlackboardComponent()
-		->SetValueAsFloat(TEXT("Distance"), Distance);
+	Blackboard->SetValueAsFloat(TEXT("Distance"), Distance);
 }
