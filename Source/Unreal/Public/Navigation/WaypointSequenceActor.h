@@ -35,6 +35,9 @@ public:
 	void StartSequence();
 
 	UFUNCTION(BlueprintCallable, Category = "Waypoint Sequence")
+	void StartSequenceFromIndex(int32 StartIndex);
+
+	UFUNCTION(BlueprintCallable, Category = "Waypoint Sequence")
 	void StopSequence();
 
 	UFUNCTION(BlueprintPure, Category = "Waypoint Sequence")

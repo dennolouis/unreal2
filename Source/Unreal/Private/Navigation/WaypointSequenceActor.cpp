@@ -44,6 +44,30 @@ void AWaypointSequenceActor::StartSequence()
 	ActivateNextWaypoint();
 }
 
+void AWaypointSequenceActor::StartSequenceFromIndex(int32 StartIndex)
+{
+	if (!Waypoints.IsValidIndex(StartIndex))
+	{
+		UE_LOG(LogWaypoint, Warning, TEXT("[Waypoint] %s could not start sequence: index %d is out of range"), *GetName(), StartIndex);
+		return;
+	}
+
+	StopSequence();
+
+	UWaypointComponent* Component = UWaypointComponent::GetWaypointComponent(this);
+	if (!Component)
+	{
+		UE_LOG(LogWaypoint, Warning, TEXT("[Waypoint] %s could not start sequence: no WaypointComponent on player controller 0"), *GetName());
+		return;
+	}
+
+	WaypointComponent = Component;
+	Component->OnWaypointReached.AddUniqueDynamic(this, &AWaypointSequenceActor::HandleWaypointReached);
+	bIsRunning = true;
+	CurrentWaypointIndex = StartIndex - 1;
+	ActivateNextWaypoint();
+}
+
 void AWaypointSequenceActor::StopSequence()
 {
 	if (UWaypointComponent* Component = WaypointComponent.Get())
