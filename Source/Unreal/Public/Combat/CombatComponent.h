@@ -63,6 +63,9 @@ class UNREAL_API UCombatComponent : public UActorComponent
 	UPROPERTY(VisibleAnywhere)
 	bool bIsMoving{ false };
 
+	float OriginalGravityScale{ 1.0f };
+	bool bIsAirAttackSuspensionActive{ false };
+
 	UPROPERTY(EditAnywhere)
 	float StaminaCost{5.0f};
 
@@ -107,6 +110,10 @@ public:
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+	UFUNCTION()
+	void HandleAirAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
 public:	
 	// Called every frame
@@ -125,6 +132,12 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void HandleResetAttack();
+
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void StartAirAttackSuspension();
+
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void EndAirAttackSuspension();
 
 	UFUNCTION(BlueprintCallable)
 	void ResetComboCounter();

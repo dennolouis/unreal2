@@ -92,6 +92,7 @@ protected:
 	virtual void BeginPlay() override;
 
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void OnMovementModeChanged(EMovementMode PreviousMovementMode, uint8 PreviousCustomMode = 0) override;
 
 	UPROPERTY(BlueprintReadOnly)
 	class UPlayerAnimInstance* PlayerAnim;

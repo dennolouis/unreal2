@@ -213,6 +213,11 @@ void UPlayerActtionsComponent::Roll()
 		bCancelledAttack = true;
 	}
 
+	if (bCancelledAttack && MainCharacterRef && MainCharacterRef->CombatComp)
+	{
+		MainCharacterRef->CombatComp->EndAirAttackSuspension();
+	}
+
 	bIsRollActive = true;
 
 	OnRollDelegate.Broadcast(bCancelledAttack ? MainCharacterRef->AnimCancelStaminaCost : RollCost);

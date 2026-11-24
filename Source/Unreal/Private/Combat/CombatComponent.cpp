@@ -4,6 +4,7 @@
 #include "Combat/CombatComponent.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Animation/AnimInstance.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Interfaces/Mainplayer.h"
 #include <Combat/LockOnComponent.h>
@@ -35,7 +36,25 @@ void UCombatComponent::BeginPlay()
 	if (CharacterRef)
 	{
 		LockOnComponentRef = CharacterRef->FindComponentByClass<ULockOnComponent>();
+
+		if (CharacterRef->GetMesh() && CharacterRef->GetMesh()->GetAnimInstance())
+		{
+			CharacterRef->GetMesh()->GetAnimInstance()->OnMontageEnded.AddUniqueDynamic(
+				this, &UCombatComponent::HandleAirAttackMontageEnded);
+		}
 	}
+}
+
+void UCombatComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (CharacterRef && CharacterRef->GetMesh() && CharacterRef->GetMesh()->GetAnimInstance())
+	{
+		CharacterRef->GetMesh()->GetAnimInstance()->OnMontageEnded.RemoveDynamic(
+			this, &UCombatComponent::HandleAirAttackMontageEnded);
+	}
+
+	EndAirAttackSuspension();
+	Super::EndPlay(EndPlayReason);
 }
 
 void UCombatComponent::SetCameraRelativeInputDirection(FVector InputDirection)
@@ -180,6 +199,11 @@ void UCombatComponent::ComboAttack()
 		return;
 	}
 
+	if (bIsAirborne)
+	{
+		StartAirAttackSuspension();
+	}
+
 	float AttackAnimDuration = CharacterRef->PlayAnimMontage(SelectedAnimation);
 
 	ComboCounter++;
@@ -249,7 +273,75 @@ void UCombatComponent::HandleResetAttack()
 	{
 		bAttackInputBuffered = false;
 		ComboAttack();
+
+		if (bIsAirAttackSuspensionActive && bCanQueueNextAttack)
+		{
+			EndAirAttackSuspension();
+		}
+		return;
 	}
+
+	EndAirAttackSuspension();
+}
+
+void UCombatComponent::StartAirAttackSuspension()
+{
+	if (bIsAirAttackSuspensionActive || !CharacterRef)
+	{
+		return;
+	}
+
+	UCharacterMovementComponent* MovementComponent = CharacterRef->GetCharacterMovement();
+	if (!MovementComponent)
+	{
+		return;
+	}
+
+	OriginalGravityScale = MovementComponent->GravityScale;
+	bIsAirAttackSuspensionActive = true;
+	MovementComponent->GravityScale = 0.0f;
+
+	FVector Velocity = MovementComponent->Velocity;
+	Velocity.Z = 0.0f;
+	MovementComponent->Velocity = Velocity;
+}
+
+void UCombatComponent::EndAirAttackSuspension()
+{
+	if (!bIsAirAttackSuspensionActive)
+	{
+		return;
+	}
+
+	if (CharacterRef)
+	{
+		if (UCharacterMovementComponent* MovementComponent = CharacterRef->GetCharacterMovement())
+		{
+			MovementComponent->GravityScale = OriginalGravityScale;
+		}
+	}
+
+	bIsAirAttackSuspensionActive = false;
+}
+
+void UCombatComponent::HandleAirAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	if (!bIsAirAttackSuspensionActive || !AirAttackAnimations.Contains(Montage))
+	{
+		return;
+	}
+
+	UAnimInstance* AnimInstance = CharacterRef && CharacterRef->GetMesh()
+		? CharacterRef->GetMesh()->GetAnimInstance()
+		: nullptr;
+	UAnimMontage* ActiveMontage = AnimInstance ? AnimInstance->GetCurrentActiveMontage() : nullptr;
+
+	if (ActiveMontage && AirAttackAnimations.Contains(ActiveMontage) && AnimInstance->Montage_IsPlaying(ActiveMontage))
+	{
+		return;
+	}
+
+	EndAirAttackSuspension();
 }
 
 void UCombatComponent::RandomAttack()
@@ -370,6 +462,7 @@ void UCombatComponent::ResetComboCounter()
 {
 	ComboCounter = 0;
 	HeavyComboCounter = 0;
+	EndAirAttackSuspension();
 }
 
 void UCombatComponent::ExecuteTeleportSpecialAttack()
@@ -489,5 +582,6 @@ void UCombatComponent::StopAttackAnimation()
 		CharacterRef->StopAnimMontage(); 
 		bCanQueueNextAttack = true; 
 	}
+	EndAirAttackSuspension();
 }
 

@@ -98,6 +98,11 @@ void AMainCharacter::BeginPlay()
 
 void AMainCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	if (CombatComp)
+	{
+		CombatComp->EndAirAttackSuspension();
+	}
+
     // Destroy any spawned weapons so they don't persist after player respawn or level unload
     if (IsValid(PrimaryEquippedWeapon))
     {
@@ -123,6 +128,16 @@ void AMainCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
     }
 
     Super::EndPlay(EndPlayReason);
+}
+
+void AMainCharacter::OnMovementModeChanged(EMovementMode PreviousMovementMode, uint8 PreviousCustomMode)
+{
+	Super::OnMovementModeChanged(PreviousMovementMode, PreviousCustomMode);
+
+	if (GetCharacterMovement() && GetCharacterMovement()->MovementMode != MOVE_Falling && CombatComp)
+	{
+		CombatComp->EndAirAttackSuspension();
+	}
 }
 
 // Called every frame
@@ -160,6 +175,11 @@ void AMainCharacter::HandleDeath()
     // Mark as dead to prevent other animations (like hurt) from interrupting
     bIsDead = true;
 
+	if (CombatComp)
+	{
+		CombatComp->EndAirAttackSuspension();
+	}
+
     // Stop any currently playing montage so death anim can play cleanly
     StopAnimMontage();
 
@@ -182,7 +202,12 @@ bool AMainCharacter::CanTakeDamage(AActor* Opponent)
 
 	if (PlayerAnim && PlayerAnim->bIsBlocking)
 	{
-		return BlockComp->Check(Opponent);
+		const bool bCanTakeDamage = BlockComp->Check(Opponent);
+		if (!bCanTakeDamage && CombatComp)
+		{
+			CombatComp->EndAirAttackSuspension();
+		}
+		return bCanTakeDamage;
 	}
 
 	return true;
@@ -219,6 +244,7 @@ void AMainCharacter::PlayHurtAnim(AActor* Attacker, TSubclassOf<class UCameraSha
 	if (CombatComp)
 	{
 		CombatComp->ClearBufferedInput();
+		CombatComp->EndAirAttackSuspension();
 	}
 
 	PlayAnimMontage(HurtAnimMontages[RandomIndex]);
@@ -238,6 +264,11 @@ void AMainCharacter::PlayHurtAnim(AActor* Attacker, TSubclassOf<class UCameraSha
 
 void AMainCharacter::PlayWeaponClashAnim(AActor* OtherWeaponOwner, float PushStrength, TSubclassOf<class UCameraShakeBase> CameraShakeTemplate)
 {
+	if (CombatComp)
+	{
+		CombatComp->EndAirAttackSuspension();
+	}
+
 	if (WeaponClashAnimMontage)
 	{
 		PlayAnimMontage(WeaponClashAnimMontage);
@@ -288,6 +319,11 @@ void AMainCharacter::CustomJump()
 		CombatComp->ClearBufferedInput();
 	}
 
+	if (CombatComp)
+	{
+		CombatComp->EndAirAttackSuspension();
+	}
+
 	StopAnimMontage();
 	Super::Jump();
 }
@@ -298,6 +334,7 @@ void AMainCharacter::TryToStopAnimation()
 
 	if (CombatComp->CanInterruptAnimation() && !PlayerActionsComp->bIsRollActive && !IsPlayingHurtAnimation())
 	{
+		CombatComp->EndAirAttackSuspension();
 		StopAnimMontage();
 		CombatComp->ResetComboCounter();
 	}
