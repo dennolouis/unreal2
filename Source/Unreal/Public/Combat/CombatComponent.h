@@ -27,6 +27,9 @@ class UNREAL_API UCombatComponent : public UActorComponent
 	TArray<UAnimMontage*> AttackAnimations;
 
 	UPROPERTY(EditAnywhere)
+	TArray<UAnimMontage*> AirAttackAnimations;
+
+	UPROPERTY(EditAnywhere)
 	UAnimMontage* SpecialAttack;
 
 	UPROPERTY(EditAnywhere, Category = "Special|Teleport")

@@ -3,6 +3,7 @@
 
 #include "Combat/CombatComponent.h"
 #include "GameFramework/Character.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Interfaces/Mainplayer.h"
 #include <Combat/LockOnComponent.h>
@@ -132,6 +133,11 @@ void UCombatComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 
 void UCombatComponent::ComboAttack()
 {
+	if (!CharacterRef)
+	{
+		return;
+	}
+
 	if (CharacterRef->Implements<UMainplayer>())
 	{
 		IMainplayer* IPlayerRef{ Cast<IMainplayer>(CharacterRef) };
@@ -153,11 +159,32 @@ void UCombatComponent::ComboAttack()
 	bCanQueueNextAttack = false;
 	bAttackInputBuffered = false;
 
-	float AttackAnimDuration = CharacterRef->PlayAnimMontage(AttackAnimations[ComboCounter]);
+	const bool bIsAirborne = CharacterRef->GetCharacterMovement() && CharacterRef->GetCharacterMovement()->IsFalling();
+	const TArray<UAnimMontage*>& SelectedAttackAnimations = bIsAirborne ? AirAttackAnimations : AttackAnimations;
+
+	if (SelectedAttackAnimations.Num() == 0)
+	{
+		bCanQueueNextAttack = true;
+		return;
+	}
+
+	if (ComboCounter < 0 || ComboCounter >= SelectedAttackAnimations.Num())
+	{
+		ComboCounter = 0;
+	}
+
+	UAnimMontage* SelectedAnimation = SelectedAttackAnimations[ComboCounter];
+	if (!IsValid(SelectedAnimation))
+	{
+		bCanQueueNextAttack = true;
+		return;
+	}
+
+	float AttackAnimDuration = CharacterRef->PlayAnimMontage(SelectedAnimation);
 
 	ComboCounter++;
 
-	int MaxCombo{ AttackAnimations.Num() };
+	int MaxCombo{ SelectedAttackAnimations.Num() };
 
 	if (ComboCounter >= MaxCombo)
 	{
